@@ -1,168 +1,82 @@
-﻿// src/services/TodoService.js
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { auth, db } from "../firebaseConfig";
+﻿import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-class TodoService {
-    // Get todos from Firestore
-    async getTodos() {
-        console.log("TodoService.getTodos çağrıldı");
+const TodoForm = ({ onAdd, language, translations, darkMode }) => {
+    const [text, setText] = useState('');
+    const [priority, setPriority] = useState('medium');
+    const [date, setDate] = useState('');
 
-        try {
-            if (!auth.currentUser) {
-                console.log("Kullanıcı giriş yapmamış, boş dizi döndürülüyor");
-                return [];
-            }
-
-            console.log("Firestore'dan kullanıcının todolarını alıyor:", auth.currentUser.uid);
-            const todosRef = collection(db, "todos");
-            const q = query(todosRef, where("userId", "==", auth.currentUser.uid));
-            const querySnapshot = await getDocs(q);
-
-            const todos = [];
-            querySnapshot.forEach((doc) => {
-                todos.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-
-            console.log("Bulunan todo sayısı:", todos.length);
-            return todos;
-        } catch (error) {
-            console.error("Todos alınırken hata:", error);
-            throw error;
-        }
-    }
-
-    // Add a new todo
-    async addTodo(newTodo) {
-        console.log("TodoService.addTodo çağrıldı");
-
-        try {
-            if (!auth.currentUser) {
-                throw new Error("Kullanıcı giriş yapmamış");
-            }
-
-            const todoWithId = {
-                ...newTodo,
-                userId: auth.currentUser.uid,
-                createdAt: new Date().toISOString()
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (text.trim()) {
+            const newTodo = {
+                id: uuidv4(),
+                text: text.trim(),
+                completed: false,
+                createdAt: new Date().toISOString(),
+                priority,
+                date: date || null,
+                tags: [],
+                category: 'other',
             };
 
-            console.log("Firebase'e todo ekleniyor:", todoWithId);
-            const docRef = await addDoc(collection(db, "todos"), todoWithId);
-            console.log("Todo eklendi, ID:", docRef.id);
-
-            // Refresh todos from Firestore
-            return await this.getTodos();
-        } catch (error) {
-            console.error("Todo eklerken hata:", error);
-            throw error;
+            onAdd(newTodo);
+            setText('');
+            setPriority('medium');
+            setDate('');
         }
-    }
+    };
 
-    // Toggle todo completion
-    async toggleTodoCompletion(id) {
-        console.log("TodoService.toggleTodoCompletion çağrıldı");
+    return (
+        <form onSubmit={handleSubmit} className="mb-4">
+            <div className="flex flex-col md:flex-row gap-2">
+                <input
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder={translations[language].newTodo}
+                    className={`flex-grow p-2 rounded ${
+                        darkMode
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-white text-gray-900'
+                    }`}
+                    required
+                />
 
-        try {
-            if (!auth.currentUser) {
-                throw new Error("Kullanıcı giriş yapmamış");
-            }
+                <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className={`p-2 rounded ${
+                        darkMode
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-white text-gray-900'
+                    }`}
+                >
+                    <option value="high">{translations[language].priority.high}</option>
+                    <option value="medium">{translations[language].priority.medium}</option>
+                    <option value="low">{translations[language].priority.low}</option>
+                </select>
 
-            // Get current todos
-            const todos = await this.getTodos();
-            const todoToUpdate = todos.find(todo => todo.id === id);
+                <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className={`p-2 rounded ${
+                        darkMode
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-white text-gray-900'
+                    }`}
+                />
 
-            if (!todoToUpdate) {
-                throw new Error("Todo bulunamadı");
-            }
+                <button
+                    type="submit"
+                    className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                >
+                    {translations[language].addButton}
+                </button>
+            </div>
+        </form>
+    );
+};
 
-            const completed = !todoToUpdate.completed;
-
-            console.log("Todo durumu güncelleniyor:", id, "tamamlandı =", completed);
-            await updateDoc(doc(db, "todos", id), {
-                completed,
-                completedAt: completed ? new Date().toISOString() : null
-            });
-
-            // Refresh todos from Firestore
-            return await this.getTodos();
-        } catch (error) {
-            console.error("Todo durumu güncellenirken hata:", error);
-            throw error;
-        }
-    }
-
-    // Update todo status
-    async updateTodoStatus(id, status) {
-        console.log("TodoService.updateTodoStatus çağrıldı");
-
-        try {
-            if (!auth.currentUser) {
-                throw new Error("Kullanıcı giriş yapmamış");
-            }
-
-            console.log("Todo durumu güncelleniyor:", id, "yeni durum =", status);
-            await updateDoc(doc(db, "todos", id), {
-                inProgress: status === 'inProgress',
-                completed: status === 'completed',
-                completedAt: status === 'completed' ? new Date().toISOString() : null
-            });
-
-            // Refresh todos from Firestore
-            return await this.getTodos();
-        } catch (error) {
-            console.error("Todo durumu güncellenirken hata:", error);
-            throw error;
-        }
-    }
-
-    // Remove todo
-    async removeTodo(id) {
-        console.log("TodoService.removeTodo çağrıldı");
-
-        try {
-            if (!auth.currentUser) {
-                throw new Error("Kullanıcı giriş yapmamış");
-            }
-
-            console.log("Todo siliniyor:", id);
-            await deleteDoc(doc(db, "todos", id));
-
-            // Refresh todos from Firestore
-            return await this.getTodos();
-        } catch (error) {
-            console.error("Todo silinirken hata:", error);
-            throw error;
-        }
-    }
-
-    // Update todo
-    async updateTodo(id, updatedTodo) {
-        console.log("TodoService.updateTodo çağrıldı");
-
-        try {
-            if (!auth.currentUser) {
-                throw new Error("Kullanıcı giriş yapmamış");
-            }
-
-            console.log("Todo güncelleniyor:", id);
-            const { id: todoId, ...dataToUpdate } = updatedTodo;
-
-            await updateDoc(doc(db, "todos", id), {
-                ...dataToUpdate,
-                updatedAt: new Date().toISOString()
-            });
-
-            // Refresh todos from Firestore
-            return await this.getTodos();
-        } catch (error) {
-            console.error("Todo güncellenirken hata:", error);
-            throw error;
-        }
-    }
-}
-
-export default new TodoService();
+export default TodoForm;

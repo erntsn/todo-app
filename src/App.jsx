@@ -218,33 +218,24 @@ const App = () => {
 
     const handleUpdateTodoStatus = async (id, status) => {
         try {
-            console.log(`Updating todo ${id} status to ${status}`);
+            console.log(`Todo durumu güncelleniyor: ${id}, hedef durum: ${status}`);
 
-            // First update our local state immediately for better UI responsiveness
-            setTodos(prevTodos => prevTodos.map(todo => {
-                if (todo.id === id) {
-                    return {
-                        ...todo,
-                        inProgress: status === 'inProgress',
-                        completed: status === 'completed',
-                        completedAt: status === 'completed' ? new Date().toISOString() : null
-                    };
-                }
-                return todo;
-            }));
-
-            // Then update in the service
-            const updatedTodos = await TodoService.updateTodoStatus(id, status);
-
-            // If the service returns updated todos, use them
-            if (updatedTodos) {
-                setTodos(updatedTodos);
+            // Backend güncellemesini başlat, ancak sonucunu bekletme
+            try {
+                // TodoService çağrısı (async)
+                TodoService.updateTodoStatus(id, status)
+                    .then(updatedTodos => {
+                        // Başarılı istek sonrası bir şey yapmak gerekiyorsa
+                        console.log("Backend güncelleme başarılı");
+                    })
+                    .catch(error => {
+                        console.error("Backend güncellemede hata:", error);
+                    });
+            } catch (error) {
+                console.error("Todo durumu güncellenirken hata:", error);
             }
         } catch (error) {
-            console.error("Error updating todo status:", error);
-            // Revert to original todos if there's an error
-            const originalTodos = await TodoService.getTodos();
-            setTodos(originalTodos);
+            console.error("Durum güncelleme hatası:", error);
         }
     };
 
