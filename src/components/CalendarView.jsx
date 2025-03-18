@@ -1,7 +1,7 @@
 ﻿// src/components/CalendarView.jsx
 import React, { useState } from 'react';
 
-const CalendarView = ({ todos = [], onToggle, onRemove, onUpdate, language, translations, darkMode }) => {
+const CalendarView = ({ todos = [], onToggle, onRemove, onUpdate, language, translations }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // Format the month and year
@@ -80,7 +80,7 @@ const CalendarView = ({ todos = [], onToggle, onRemove, onUpdate, language, tran
     };
 
     return (
-        <div className={`h-full flex flex-col ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        <div className="h-full flex flex-col text-white">
             {/* Calendar Header */}
             <div className="flex justify-between items-center mb-4">
                 <button
@@ -116,8 +116,8 @@ const CalendarView = ({ todos = [], onToggle, onRemove, onUpdate, language, tran
                         key={`day-${index}`}
                         className={`border rounded p-1 h-24 overflow-y-auto ${
                             dayObj.isEmpty
-                                ? darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
-                                : darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'
+                                ? 'bg-gray-800 border-gray-700'
+                                : 'bg-gray-700 border-gray-600'
                         }`}
                     >
                         {dayObj.day && (

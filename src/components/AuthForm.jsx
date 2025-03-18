@@ -33,13 +33,13 @@ const AuthForm = () => {
     };
 
     return (
-        <div className="max-w-md w-full mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <div className="max-w-md w-full mx-auto p-6 bg-gray-800 rounded-lg shadow-lg text-white">
             <h2 className="text-2xl font-bold text-center mb-4">
                 {isRegistering ? "Kayıt Ol" : "Giriş Yap"}
             </h2>
 
             {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                <div className="mb-4 p-3 bg-red-900 text-red-200 rounded">
                     {error}
                 </div>
             )}
@@ -51,7 +51,7 @@ const AuthForm = () => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded bg-gray-700 text-white border-gray-600"
                         required
                     />
                 </div>
@@ -62,7 +62,7 @@ const AuthForm = () => {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded bg-gray-700 text-white border-gray-600"
                         required
                     />
                 </div>
@@ -84,7 +84,7 @@ const AuthForm = () => {
 
             <button
                 onClick={() => setIsRegistering(!isRegistering)}
-                className="w-full mt-4 p-2 bg-gray-200 rounded"
+                className="w-full mt-4 p-2 bg-gray-700 rounded"
             >
                 {isRegistering
                     ? "Zaten hesabın var mı? Giriş yap"

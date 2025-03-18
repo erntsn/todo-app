@@ -21,9 +21,6 @@ const translations = {
         active: "Yapılacak",
         completed: "Tamamlandı",
         settings: "Ayarlar ⚙️",
-        darkMode: "🌙 Karanlık Mod",
-        darkModeOn: "Açık",
-        darkModeOff: "Kapalı",
         languageSelect: "🌐 Dil Seçimi",
         newTodo: "Yeni görev",
         priority: {
@@ -71,9 +68,6 @@ const translations = {
         active: "Active",
         completed: "Completed",
         settings: "Settings ⚙️",
-        darkMode: "🌙 Dark Mode",
-        darkModeOn: "On",
-        darkModeOff: "Off",
         languageSelect: "🌐 Language Select",
         newTodo: "New task",
         priority: {
@@ -136,7 +130,8 @@ const App = () => {
     // App state
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
-    const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+    // Always use dark mode
+    const darkMode = true;
     const [language, setLanguage] = useState(() => localStorage.getItem("language") || "tr");
     const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "list");
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -152,15 +147,11 @@ const App = () => {
         error: authError?.message
     });
 
-    // Handle dark mode
+    // Handle dark mode - always set to true
     useEffect(() => {
-        if (darkMode) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-        localStorage.setItem("darkMode", darkMode);
-    }, [darkMode]);
+        // Always add dark class
+        document.documentElement.classList.add("dark");
+    }, []);
 
     // Handle language
     useEffect(() => {
@@ -337,10 +328,10 @@ const App = () => {
     if (loading) {
         console.log("Kimlik doğrulama yükleniyor...");
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-                <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
+                <div className="text-center p-6 bg-gray-800 rounded-lg shadow-lg">
                     <div className="w-16 h-16 border-t-4 border-b-4 border-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-xl">{translations[language].loading}</p>
+                    <p className="text-xl text-white">{translations[language].loading}</p>
                 </div>
             </div>
         );
@@ -350,11 +341,11 @@ const App = () => {
     if (authError) {
         console.error("Kimlik doğrulama hatası:", authError);
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-                <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
+                <div className="text-center p-6 bg-gray-800 rounded-lg shadow-lg">
                     <div className="text-red-500 text-6xl mb-4">❌</div>
-                    <h2 className="text-xl font-bold mb-2">{translations[language].authError}</h2>
-                    <p className="mb-4">{authError.message}</p>
+                    <h2 className="text-xl font-bold mb-2 text-white">{translations[language].authError}</h2>
+                    <p className="mb-4 text-white">{authError.message}</p>
                     <button
                         onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-blue-500 text-white rounded-lg"
@@ -370,12 +361,12 @@ const App = () => {
 
     // Main content
     return (
-        <div className="h-screen w-screen flex items-stretch overflow-hidden bg-gray-100 dark:bg-gray-900">
+        <div className="h-screen w-screen flex items-stretch overflow-hidden bg-gray-900">
             {user ? (
-                <div className={`flex flex-col w-full h-full ${darkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"}`}>
+                <div className="flex flex-col w-full h-full bg-gray-800 text-white">
                     {/* Fixed Header */}
-                    <div className={`sticky top-0 z-10 p-4 shadow-md ${darkMode ? "bg-gray-800" : "bg-white"}`}>
-                        <h1 className={`text-3xl font-bold text-center mb-4 ${darkMode ? "text-white" : "text-gray-900"}`}>
+                    <div className="sticky top-0 z-10 p-4 shadow-md bg-gray-800">
+                        <h1 className="text-3xl font-bold text-center mb-4 text-white">
                             {translations[language].title}
                         </h1>
 
@@ -386,11 +377,7 @@ const App = () => {
                                 placeholder={translations[language].search}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className={`w-full p-2 rounded border ${
-                                    darkMode
-                                        ? 'bg-gray-700 border-gray-600 text-white'
-                                        : 'bg-white border-gray-300 text-gray-900'
-                                }`}
+                                className="w-full p-2 rounded border bg-gray-700 border-gray-600 text-white"
                             />
                         </div>
 
@@ -412,9 +399,7 @@ const App = () => {
                                     className={`px-2 py-1 rounded-lg text-xs ${
                                         categoryFilter === 'all'
                                             ? 'bg-blue-500 text-white'
-                                            : darkMode
-                                                ? 'bg-gray-700 text-gray-300'
-                                                : 'bg-gray-200 text-gray-700'
+                                            : 'bg-gray-700 text-gray-300'
                                     }`}
                                 >
                                     {translations[language].allCategories}
@@ -427,9 +412,7 @@ const App = () => {
                                         className={`px-2 py-1 rounded-lg text-xs ${
                                             categoryFilter === cat
                                                 ? `bg-${categoryColors[cat]}-500 text-white`
-                                                : darkMode
-                                                    ? 'bg-gray-700 text-gray-300'
-                                                    : `bg-${categoryColors[cat]}-100 text-${categoryColors[cat]}-800`
+                                                : `bg-gray-700 text-gray-300`
                                         }`}
                                     >
                                         {translations[language].categories[cat]}
@@ -442,11 +425,7 @@ const App = () => {
                         {tagFilter && !showPomodoro && !showStatistics && (
                             <div className="flex items-center gap-2 my-2">
                                 <span className="text-sm">{translations[language].filteringByTag}:</span>
-                                <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                                    darkMode
-                                        ? 'bg-blue-700 text-white'
-                                        : 'bg-blue-100 text-blue-800'
-                                }`}>
+                                <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-700 text-white">
                                     <span>#{tagFilter}</span>
                                     <button
                                         onClick={() => setTagFilter(null)}
@@ -588,10 +567,8 @@ const App = () => {
 
                     {/* Settings Panel (Conditionally Rendered) */}
                     {settingsOpen && (
-                        <div className={`p-4 border-t ${darkMode ? "border-gray-700" : "border-gray-300"}`}>
+                        <div className="p-4 border-t border-gray-700">
                             <Settings
-                                darkMode={darkMode}
-                                setDarkMode={setDarkMode}
                                 language={language}
                                 setLanguage={setLanguage}
                                 translations={translations}
@@ -606,7 +583,7 @@ const App = () => {
                     )}
                 </div>
             ) : (
-                <div className="w-full flex items-center justify-center">
+                <div className="w-full flex items-center justify-center bg-gray-900">
                     <AuthForm />
                 </div>
             )}

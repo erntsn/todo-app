@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 
-const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTagClick, language, translations, darkMode }) => {
+const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTagClick, language, translations }) => {
     // Yerel state ve kolonlar
     const [localColumns, setLocalColumns] = useState({
         todo: [],
@@ -268,9 +268,7 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
     const renderCard = (todo, columnName) => (
         <div
             key={todo.id}
-            className={`${
-                darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
-            } rounded-lg shadow p-3 mb-2 cursor-move drag-item`}
+            className="bg-gray-700 text-white rounded-lg shadow p-3 mb-2 cursor-move drag-item"
             draggable="true"
             onClick={() => handleCardClick(todo)}
             onDragStart={(e) => handleDragStart(e, todo, columnName)}
@@ -290,14 +288,10 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
                 </button>
             </div>
 
-            <div className={`text-xs mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+            <div className="text-xs mt-2 text-gray-300">
                 {/* Category badge */}
                 {todo.category && (
-                    <span className={`inline-block px-2 py-0.5 rounded-full mb-1 ${
-                        darkMode
-                            ? `bg-${categoryColors[todo.category] || 'gray'}-700 text-${categoryColors[todo.category] || 'gray'}-200`
-                            : `bg-${categoryColors[todo.category] || 'gray'}-100 text-${categoryColors[todo.category] || 'gray'}-800`
-                    }`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-full mb-1 bg-${categoryColors[todo.category] || 'gray'}-700 text-${categoryColors[todo.category] || 'gray'}-200`}>
                     {translations[language].categories[todo.category] || translations[language].categories.other}
                   </span>
                 )}
@@ -369,16 +363,12 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
     // Render a column
     const renderColumn = (columnName) => (
         <div
-            className={`${
-                darkMode ? 'bg-gray-800' : 'bg-gray-200'
-            } rounded-lg p-3 min-w-64 w-1/3 flex-1 flex flex-col h-full column-drop-area`}
+            className="bg-gray-800 rounded-lg p-3 min-w-64 w-1/3 flex-1 flex flex-col h-full column-drop-area"
             onDragOver={(e) => handleDragOver(e, columnName)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, columnName)}
         >
-            <h2 className={`font-bold text-center mb-2 sticky top-0 ${
-                darkMode ? 'text-white' : 'text-gray-800'
-            }`}>
+            <h2 className="font-bold text-center mb-2 sticky top-0 text-white">
                 {columnTitles[columnName]}
                 <span className="ml-2 text-sm px-2 py-1 rounded-full bg-blue-500 text-white">
                   {localColumns[columnName]?.length || 0}
@@ -387,9 +377,7 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
 
             <div className="space-y-2 overflow-y-auto flex-1">
                 {(!localColumns[columnName] || localColumns[columnName].length === 0) ? (
-                    <div className={`text-center py-4 ${
-                        darkMode ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
+                    <div className="text-center py-4 text-gray-400">
                         {language === 'tr' ? 'Görev yok' : 'No tasks'}
                     </div>
                 ) : (
@@ -405,7 +393,7 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
                 {`
                 .column-drop-area.drag-over {
                     border: 2px dashed #3b82f6;
-                    background-color: ${darkMode ? 'rgba(30, 41, 59, 0.7)' : 'rgba(226, 232, 240, 0.7)'};
+                    background-color: rgba(30, 41, 59, 0.7);
                 }
                 .drag-item {
                     transition: opacity 0.2s ease-in-out;
@@ -429,7 +417,7 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTa
                     onDelete={onRemove}
                     language={language}
                     translations={translations}
-                    darkMode={darkMode}
+                    darkMode={true}
                 />
             )}
         </>

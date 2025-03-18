@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 
-const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, language, translations, darkMode }) => {
+const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, language, translations }) => {
     const [selectedTodo, setSelectedTodo] = useState(null);
 
     // Category colors mapping
@@ -33,9 +33,7 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
                 todos.map((todo) => (
                     <div
                         key={todo.id}
-                        className={`flex items-center justify-between rounded p-3 my-2 shadow cursor-pointer ${
-                            darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'
-                        }`}
+                        className="flex items-center justify-between rounded p-3 my-2 shadow cursor-pointer bg-gray-700 text-white"
                         onClick={() => handleCardClick(todo)}
                     >
                         <div className="flex items-center gap-3">
@@ -52,14 +50,10 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
                                 <div className={`font-semibold ${todo.completed ? 'line-through text-gray-400' : ''}`}>
                                     {todo.text}
                                 </div>
-                                <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <div className="text-xs text-gray-300">
                                     {/* Category badge */}
                                     {todo.category && (
-                                        <span className={`inline-block px-2 py-0.5 rounded-full mr-2 ${
-                                            darkMode
-                                                ? `bg-${categoryColors[todo.category] || 'gray'}-700 text-${categoryColors[todo.category] || 'gray'}-200`
-                                                : `bg-${categoryColors[todo.category] || 'gray'}-100 text-${categoryColors[todo.category] || 'gray'}-800`
-                                        }`}>
+                                        <span className={`inline-block px-2 py-0.5 rounded-full mr-2 bg-${categoryColors[todo.category] || 'gray'}-700 text-${categoryColors[todo.category] || 'gray'}-200`}>
                                         {translations[language].categories[todo.category] || translations[language].categories.other}
                                       </span>
                                     )}
@@ -113,7 +107,7 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
                     </div>
                 ))
             ) : (
-                <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                <p className="text-center text-gray-400">
                     {translations[language].noTodo}
                 </p>
             )}
@@ -126,7 +120,7 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
                     onDelete={onRemove}
                     language={language}
                     translations={translations}
-                    darkMode={darkMode}
+                    darkMode={true}
                 />
             )}
         </div>

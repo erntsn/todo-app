@@ -3,7 +3,7 @@ import SubtaskList from './SubtaskList';
 import TagsInput from './TagsInput';
 import CategorySelector from './CategorySelector';
 
-const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translations, darkMode }) => {
+const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translations }) => {
     const [editedTodo, setEditedTodo] = useState({
         ...todo,
         notes: todo.notes || '',
@@ -99,20 +99,14 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div
-                className={`relative max-w-2xl w-full mx-auto rounded-lg shadow-lg ${
-                    darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-                }`}
-            >
+            <div className="relative max-w-2xl w-full mx-auto rounded-lg shadow-lg bg-gray-800 text-white">
                 {/* Header with close button */}
-                <div className="flex justify-between items-center p-4 border-b">
+                <div className="flex justify-between items-center p-4 border-b border-gray-700">
                     {/* Empty div for balance */}
                     <div className="w-6"></div>
 
                     {/* Title - centered */}
-                    <h2 className={`text-xl font-bold text-center ${
-                        darkMode ? 'text-white' : 'text-gray-900'
-                    }`}>
+                    <h2 className="text-xl font-bold text-center text-white">
                         {t.title}
                     </h2>
 
@@ -141,29 +135,21 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                             name="text"
                             value={editedTodo.text}
                             onChange={handleChange}
-                            className={`text-xl font-bold w-full p-2 rounded ${
-                                darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'
-                            } border-0 focus:ring-2 focus:ring-blue-500`}
+                            className="text-xl font-bold w-full p-2 rounded bg-gray-700 text-white border-0 focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
 
                     {/* Priority and Date */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div className="w-full">
-                            <label className={`block mb-2 text-sm font-medium ${
-                                darkMode ? 'text-gray-300' : 'text-gray-700'
-                            }`}>
+                            <label className="block mb-2 text-sm font-medium text-gray-300">
                                 {t.priority.label}
                             </label>
                             <select
                                 name="priority"
                                 value={editedTodo.priority}
                                 onChange={handleChange}
-                                className={`w-full p-2.5 rounded ${
-                                    darkMode
-                                        ? 'bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                                        : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                } border text-sm block appearance-none`}
+                                className="w-full p-2.5 rounded bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500 border text-sm block appearance-none"
                             >
                                 <option value="high">{priorityOptions.high}</option>
                                 <option value="medium">{priorityOptions.medium}</option>
@@ -172,9 +158,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                         </div>
 
                         <div className="w-full">
-                            <label className={`block mb-2 text-sm font-medium ${
-                                darkMode ? 'text-gray-300' : 'text-gray-700'
-                            }`}>
+                            <label className="block mb-2 text-sm font-medium text-gray-300">
                                 {t.date}
                             </label>
                             <input
@@ -182,11 +166,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                                 name="date"
                                 value={editedTodo.date || ''}
                                 onChange={handleChange}
-                                className={`w-full p-2.5 rounded ${
-                                    darkMode
-                                        ? 'bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                                        : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                } border text-sm block`}
+                                className="w-full p-2.5 rounded bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500 border text-sm block"
                             />
                         </div>
                     </div>
@@ -197,7 +177,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                             category={editedTodo.category || 'other'}
                             onChange={(category) => setEditedTodo(prev => ({ ...prev, category }))}
                             language={language}
-                            darkMode={darkMode}
+                            darkMode={true}
                         />
                     </div>
 
@@ -207,7 +187,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                             tags={editedTodo.tags || []}
                             onChange={handleTagsUpdate}
                             language={language}
-                            darkMode={darkMode}
+                            darkMode={true}
                         />
                     </div>
 
@@ -231,7 +211,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                                 <select
                                     value={recurrenceType}
                                     onChange={(e) => setRecurrenceType(e.target.value)}
-                                    className={`px-3 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                                    className="px-3 py-2 rounded bg-gray-700 text-white"
                                 >
                                     <option value="daily">{recurrenceOptions.daily}</option>
                                     <option value="weekly">{recurrenceOptions.weekly}</option>
@@ -240,15 +220,15 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                                 </select>
 
                                 <div className="flex">
-                              <span className={`px-3 py-2 rounded-l ${darkMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                                {t.every}
-                              </span>
+                                  <span className="px-3 py-2 rounded-l bg-gray-600 text-white">
+                                    {t.every}
+                                  </span>
                                     <input
                                         type="number"
                                         min="1"
                                         value={recurrenceValue}
                                         onChange={(e) => setRecurrenceValue(parseInt(e.target.value || 1))}
-                                        className={`w-16 px-3 py-2 rounded-r ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                                        className="w-16 px-3 py-2 rounded-r bg-gray-700 text-white"
                                     />
                                 </div>
                             </div>
@@ -257,9 +237,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
 
                     {/* Notes */}
                     <div className="mb-4">
-                        <label className={`block mb-2 text-sm font-medium ${
-                            darkMode ? 'text-gray-300' : 'text-gray-700'
-                        }`}>
+                        <label className="block mb-2 text-sm font-medium text-gray-300">
                             {t.notes}
                         </label>
                         <textarea
@@ -267,11 +245,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                             value={editedTodo.notes}
                             onChange={handleChange}
                             rows="4"
-                            className={`w-full p-2.5 rounded resize-none ${
-                                darkMode
-                                    ? 'bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                                    : 'bg-white text-gray-900 border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                            } border text-sm block`}
+                            className="w-full p-2.5 rounded resize-none bg-gray-700 text-white border-gray-600 focus:ring-blue-500 focus:border-blue-500 border text-sm block"
                             placeholder={t.notesPlaceholder}
                         />
                     </div>
@@ -280,7 +254,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                     <SubtaskList
                         subtasks={editedTodo.subtasks}
                         onUpdate={handleSubtasksUpdate}
-                        darkMode={darkMode}
+                        darkMode={true}
                         language={language}
                     />
 

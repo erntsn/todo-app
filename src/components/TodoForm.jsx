@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-const TodoForm = ({ onAdd, language, translations, darkMode }) => {
+const TodoForm = ({ onAdd, language, translations }) => {
     const [text, setText] = useState('');
     const [priority, setPriority] = useState('medium');
     const [date, setDate] = useState('');
@@ -35,22 +35,14 @@ const TodoForm = ({ onAdd, language, translations, darkMode }) => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={translations[language].newTodo}
-                    className={`flex-grow p-2 rounded ${
-                        darkMode
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-white text-gray-900'
-                    }`}
+                    className="flex-grow p-2 rounded bg-gray-700 text-white"
                     required
                 />
 
                 <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
-                    className={`p-2 rounded ${
-                        darkMode
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-white text-gray-900'
-                    }`}
+                    className="p-2 rounded bg-gray-700 text-white"
                 >
                     <option value="high">{translations[language].priority.high}</option>
                     <option value="medium">{translations[language].priority.medium}</option>
@@ -61,11 +53,7 @@ const TodoForm = ({ onAdd, language, translations, darkMode }) => {
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className={`p-2 rounded ${
-                        darkMode
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-white text-gray-900'
-                    }`}
+                    className="p-2 rounded bg-gray-700 text-white"
                 />
 
                 <button

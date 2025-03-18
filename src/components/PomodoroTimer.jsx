@@ -1,7 +1,7 @@
 ﻿// src/components/PomodoroTimer.jsx
 import React, { useState, useEffect, useRef } from 'react';
 
-const PomodoroTimer = ({ language, darkMode }) => {
+const PomodoroTimer = ({ language }) => {
     const [minutes, setMinutes] = useState(25);
     const [seconds, setSeconds] = useState(0);
     const [isActive, setIsActive] = useState(false);
@@ -101,7 +101,7 @@ const PomodoroTimer = ({ language, darkMode }) => {
     };
 
     return (
-        <div className={`w-full max-w-md mx-auto p-4 rounded-lg shadow-lg ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+        <div className="w-full max-w-md mx-auto p-4 rounded-lg shadow-lg bg-gray-800 text-white">
             <div className="text-center mb-4">
                 <h2 className="text-2xl font-bold mb-4">Pomodoro Timer</h2>
 
@@ -112,9 +112,7 @@ const PomodoroTimer = ({ language, darkMode }) => {
                         className={`px-4 py-2 rounded-lg ${
                             mode === 'work'
                                 ? 'bg-red-600 text-white'
-                                : darkMode
-                                    ? 'bg-gray-700 text-gray-300'
-                                    : 'bg-gray-200 text-gray-700'
+                                : 'bg-gray-700 text-gray-300'
                         }`}
                     >
                         {t.work}
@@ -124,9 +122,7 @@ const PomodoroTimer = ({ language, darkMode }) => {
                         className={`px-4 py-2 rounded-lg ${
                             mode === 'shortBreak'
                                 ? 'bg-green-600 text-white'
-                                : darkMode
-                                    ? 'bg-gray-700 text-gray-300'
-                                    : 'bg-gray-200 text-gray-700'
+                                : 'bg-gray-700 text-gray-300'
                         }`}
                     >
                         {t.shortBreak}
@@ -136,9 +132,7 @@ const PomodoroTimer = ({ language, darkMode }) => {
                         className={`px-4 py-2 rounded-lg ${
                             mode === 'longBreak'
                                 ? 'bg-blue-600 text-white'
-                                : darkMode
-                                    ? 'bg-gray-700 text-gray-300'
-                                    : 'bg-gray-200 text-gray-700'
+                                : 'bg-gray-700 text-gray-300'
                         }`}
                     >
                         {t.longBreak}
@@ -155,18 +149,14 @@ const PomodoroTimer = ({ language, darkMode }) => {
                     <button
                         onClick={toggleTimer}
                         className={`px-6 py-2 rounded-lg ${
-                            darkMode
-                                ? isActive ? 'bg-yellow-600' : 'bg-green-600'
-                                : isActive ? 'bg-yellow-500' : 'bg-green-500'
+                            isActive ? 'bg-yellow-600' : 'bg-green-600'
                         } text-white font-medium`}
                     >
                         {isActive ? t.pause : t.start}
                     </button>
                     <button
                         onClick={resetTimer}
-                        className={`px-6 py-2 rounded-lg ${
-                            darkMode ? 'bg-gray-700' : 'bg-gray-200'
-                        } font-medium`}
+                        className="px-6 py-2 rounded-lg bg-gray-700 font-medium"
                     >
                         {t.reset}
                     </button>
