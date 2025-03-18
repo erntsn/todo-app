@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import SubtaskList from './SubtaskList';
+import TagsInput from './TagsInput';
+import CategorySelector from './CategorySelector';
 
 const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translations, darkMode }) => {
     const [editedTodo, setEditedTodo] = useState({
         ...todo,
         notes: todo.notes || '',
-        subtasks: todo.subtasks || []
+        subtasks: todo.subtasks || [],
+        tags: todo.tags || [],
+        category: todo.category || 'other',
+        recurring: todo.recurring || null
     });
+
+    // Recurring task options
+    const [isRecurring, setIsRecurring] = useState(!!todo.recurring);
+    const [recurrenceType, setRecurrenceType] = useState(todo.recurring?.type || 'daily');
+    const [recurrenceValue, setRecurrenceValue] = useState(todo.recurring?.value || 1);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -17,13 +27,31 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
         setEditedTodo(prev => ({ ...prev, subtasks }));
     };
 
+    const handleTagsUpdate = (tags) => {
+        setEditedTodo(prev => ({ ...prev, tags }));
+    };
+
     const handleSave = () => {
-        onUpdate(editedTodo);
+        // Update recurring settings
+        const updatedTodo = {
+            ...editedTodo,
+            recurring: isRecurring ? {
+                type: recurrenceType,
+                value: recurrenceValue,
+                nextDate: editedTodo.date,
+            } : null
+        };
+
+        onUpdate(updatedTodo);
         onClose();
     };
 
     const handleToggleComplete = () => {
-        setEditedTodo(prev => ({ ...prev, completed: !prev.completed }));
+        setEditedTodo(prev => ({
+            ...prev,
+            completed: !prev.completed,
+            completedAt: !prev.completed ? new Date().toISOString() : null
+        }));
     };
 
     const t = {
@@ -41,7 +69,9 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                 low: 'Düşük'
             },
             notesPlaceholder: 'Notlarınızı buraya yazın...',
-            confirmDelete: 'Bu görevi silmek istediğinize emin misiniz?'
+            confirmDelete: 'Bu görevi silmek istediğinize emin misiniz?',
+            recurring: 'Tekrarlayan Görev',
+            every: 'Her'
         },
         en: {
             title: 'Task Details',
@@ -57,12 +87,15 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                 low: 'Low'
             },
             notesPlaceholder: 'Write your notes here...',
-            confirmDelete: 'Are you sure you want to delete this task?'
+            confirmDelete: 'Are you sure you want to delete this task?',
+            recurring: 'Recurring Task',
+            every: 'Every'
         }
     }[language];
 
-    // Öncelik değerlerini çevirileri alıyoruz
+    // Get priority options from translations
     const priorityOptions = translations[language].priority;
+    const recurrenceOptions = translations[language].recurrence;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -76,14 +109,14 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                     {/* Empty div for balance */}
                     <div className="w-6"></div>
 
-                    {/* Title - Now centered */}
+                    {/* Title - centered */}
                     <h2 className={`text-xl font-bold text-center ${
                         darkMode ? 'text-white' : 'text-gray-900'
                     }`}>
                         {t.title}
                     </h2>
 
-                    {/* Close button - Now with clear X that will be visible in all modes */}
+                    {/* Close button */}
                     <button
                         onClick={onClose}
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800"
@@ -158,6 +191,70 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                         </div>
                     </div>
 
+                    {/* Category selector */}
+                    <div className="mb-4">
+                        <CategorySelector
+                            category={editedTodo.category || 'other'}
+                            onChange={(category) => setEditedTodo(prev => ({ ...prev, category }))}
+                            language={language}
+                            darkMode={darkMode}
+                        />
+                    </div>
+
+                    {/* Tags input */}
+                    <div className="mb-4">
+                        <TagsInput
+                            tags={editedTodo.tags || []}
+                            onChange={handleTagsUpdate}
+                            language={language}
+                            darkMode={darkMode}
+                        />
+                    </div>
+
+                    {/* Recurring task options */}
+                    <div className="mb-4">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="detailIsRecurring"
+                                checked={isRecurring}
+                                onChange={(e) => setIsRecurring(e.target.checked)}
+                                className="h-4 w-4"
+                            />
+                            <label htmlFor="detailIsRecurring" className="text-sm">
+                                {t.recurring}
+                            </label>
+                        </div>
+
+                        {isRecurring && (
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                <select
+                                    value={recurrenceType}
+                                    onChange={(e) => setRecurrenceType(e.target.value)}
+                                    className={`px-3 py-2 rounded ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                                >
+                                    <option value="daily">{recurrenceOptions.daily}</option>
+                                    <option value="weekly">{recurrenceOptions.weekly}</option>
+                                    <option value="monthly">{recurrenceOptions.monthly}</option>
+                                    <option value="yearly">{recurrenceOptions.yearly}</option>
+                                </select>
+
+                                <div className="flex">
+                              <span className={`px-3 py-2 rounded-l ${darkMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                                {t.every}
+                              </span>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={recurrenceValue}
+                                        onChange={(e) => setRecurrenceValue(parseInt(e.target.value || 1))}
+                                        className={`w-16 px-3 py-2 rounded-r ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-900'}`}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Notes */}
                     <div className="mb-4">
                         <label className={`block mb-2 text-sm font-medium ${
@@ -202,7 +299,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                         </button>
 
                         <div className="space-x-2">
-                            {/* Cancel button - Fixed for all modes */}
+                            {/* Cancel button */}
                             <button
                                 onClick={onClose}
                                 className="px-4 py-2 rounded font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"

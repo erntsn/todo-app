@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TaskDetailModal from './TaskDetailModal';
 
-const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, language, translations, darkMode }) => {
+const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, onTagClick, language, translations, darkMode }) => {
     const [columns, setColumns] = useState({
         todo: [],
         inProgress: [],
@@ -10,6 +10,17 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, lang
 
     const [draggedItem, setDraggedItem] = useState(null);
     const [selectedTodo, setSelectedTodo] = useState(null);
+
+    // Category colors mapping
+    const categoryColors = {
+        work: 'blue',
+        personal: 'purple',
+        health: 'green',
+        shopping: 'pink',
+        finance: 'yellow',
+        education: 'indigo',
+        other: 'gray'
+    };
 
     // Group todos into columns whenever todos change
     useEffect(() => {
@@ -113,7 +124,18 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, lang
             </div>
 
             <div className={`text-xs mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                <div className="flex justify-between">
+                {/* Category badge */}
+                {todo.category && (
+                    <span className={`inline-block px-2 py-0.5 rounded-full mb-1 ${
+                        darkMode
+                            ? `bg-${categoryColors[todo.category] || 'gray'}-700 text-${categoryColors[todo.category] || 'gray'}-200`
+                            : `bg-${categoryColors[todo.category] || 'gray'}-100 text-${categoryColors[todo.category] || 'gray'}-800`
+                    }`}>
+                    {translations[language].categories[todo.category] || translations[language].categories.other}
+                  </span>
+                )}
+
+                <div className="flex justify-between mt-1">
                     <span>🗓️ {todo.date || '-'}</span>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                         todo.priority === 'high'
@@ -122,14 +144,40 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, lang
                                 ? 'bg-yellow-100 text-yellow-700'
                                 : 'bg-green-100 text-green-700'
                     }`}>
-            {todo.priority
-                ? translations[language].priority[todo.priority]
-                : translations[language].priority.medium}
-          </span>
+                      {todo.priority
+                          ? translations[language].priority[todo.priority]
+                          : translations[language].priority.medium}
+                    </span>
                 </div>
 
-                {/* Additional indicators for notes and subtasks */}
-                <div className="mt-1 flex gap-2">
+                {/* Additional indicators */}
+                <div className="mt-1 flex flex-wrap gap-2">
+                    {/* Tags */}
+                    {todo.tags && todo.tags.length > 0 && (
+                        <div>
+                            {todo.tags.slice(0, 2).map(tag => (
+                                <span
+                                    key={tag}
+                                    className="mr-1 cursor-pointer hover:underline"
+                                    onClick={(e) => {
+                                        e.stopPropagation(); // Prevent opening the detail modal
+                                        onTagClick(tag);
+                                    }}
+                                >
+                            #{tag}
+                          </span>
+                            ))}
+                            {todo.tags.length > 2 && <span>+{todo.tags.length - 2}</span>}
+                        </div>
+                    )}
+
+                    {/* Recurring indicator */}
+                    {todo.recurring && (
+                        <span title={`${translations[language].recurrence[todo.recurring.type]}, ${translations[language].every} ${todo.recurring.value}`}>
+                        🔄
+                      </span>
+                    )}
+
                     {todo.notes && <span>📝</span>}
                     {todo.subtasks && todo.subtasks.length > 0 && (
                         <span>📋 {todo.subtasks.filter(st => st.completed).length}/{todo.subtasks.length}</span>
@@ -165,8 +213,8 @@ const TrelloBoard = ({ todos, onToggle, onRemove, onUpdate, onUpdateStatus, lang
             }`}>
                 {columnTitles[columnName]}
                 <span className="ml-2 text-sm px-2 py-1 rounded-full bg-blue-500 text-white">
-          {columns[columnName].length}
-        </span>
+                  {columns[columnName].length}
+                </span>
             </h2>
 
             <div className="space-y-2 overflow-y-auto flex-1">
