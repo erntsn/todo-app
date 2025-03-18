@@ -17,10 +17,10 @@ export default function useFirestore(collectionName) {
         if (!user) {
             setDocuments([]);
             setIsLoading(false);
-            return;
+            return () => {}; // Return empty cleanup function
         }
 
-        // Create a query against the collection
+        // Create a query against the collection, filtering by userId
         const q = query(
             collection(db, collectionName),
             where("userId", "==", user.uid)
@@ -50,7 +50,7 @@ export default function useFirestore(collectionName) {
 
         // Cleanup subscription on unmount
         return () => unsubscribe();
-    }, [collectionName, db]);
+    }, [collectionName, db, auth.currentUser]);
 
     // Add a document
     const addDocument = async (data) => {
@@ -76,6 +76,21 @@ export default function useFirestore(collectionName) {
             const user = auth.currentUser;
             if (!user) throw new Error("User not authenticated");
 
+            // Verify document belongs to current user before updating
+            const q = query(
+                collection(db, collectionName),
+                where("userId", "==", user.uid)
+            );
+            const querySnapshot = await getDocs(q);
+            const docs = [];
+            querySnapshot.forEach((doc) => {
+                docs.push(doc.id);
+            });
+
+            if (!docs.includes(id)) {
+                throw new Error("Document does not belong to current user");
+            }
+
             const docRef = doc(db, collectionName, id);
             return await updateDoc(docRef, {
                 ...data,
@@ -93,6 +108,21 @@ export default function useFirestore(collectionName) {
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("User not authenticated");
+
+            // Verify document belongs to current user before deleting
+            const q = query(
+                collection(db, collectionName),
+                where("userId", "==", user.uid)
+            );
+            const querySnapshot = await getDocs(q);
+            const docs = [];
+            querySnapshot.forEach((doc) => {
+                docs.push(doc.id);
+            });
+
+            if (!docs.includes(id)) {
+                throw new Error("Document does not belong to current user");
+            }
 
             const docRef = doc(db, collectionName, id);
             return await deleteDoc(docRef);

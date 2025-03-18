@@ -1,142 +1,94 @@
-﻿import React, { useState, useEffect } from "react";
-import { registerUser, loginUser, logoutUser } from "../authService";
-
-const translations = {
-    tr: {
-        login: "Giriş Yap",
-        register: "Kayıt Ol",
-        logout: "Çıkış Yap",
-        noAccount: "Hesabın yok mu? Kayıt ol",
-        haveAccount: "Zaten hesabın var mı? Giriş yap",
-        settings: "Ayarlar",
-        darkMode: "Karanlık Mod",
-        darkModeOn: "Açık",
-        darkModeOff: "Kapalı",
-        languageSelect: "Dil Seçimi",
-        successRegister: "Kayıt başarılı! Şimdi giriş yapabilirsiniz.",
-        successLogin: "Giriş başarılı!",
-        error: "Hata",
-        errorMessage: "Email veya şifre yanlış. Lütfen tekrar deneyin.",
-        ok: "Tamam"
-    },
-    en: {
-        login: "Login",
-        register: "Register",
-        logout: "Logout",
-        noAccount: "Don't have an account? Sign up",
-        haveAccount: "Already have an account? Login",
-        settings: "Settings",
-        darkMode: "Dark Mode",
-        darkModeOn: "On",
-        darkModeOff: "Off",
-        languageSelect: "Language Selection",
-        successRegister: "Registration successful! You can now log in.",
-        successLogin: "Login successful!",
-        error: "Login Failed",
-        errorMessage: "Your email or password is incorrect. Please try again.",
-        ok: "OK"
-    }
-};
+﻿import React, { useState } from "react";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebaseConfig";
 
 const AuthForm = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isRegistering, setIsRegistering] = useState(false);
-    const [darkMode, setDarkMode] = useState(() => {
-        return localStorage.getItem("darkMode") === "true";
-    });
-    const [language, setLanguage] = useState(() => {
-        return localStorage.getItem("language") || "tr";
-    });
-    const [popup, setPopup] = useState(null);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        if (darkMode) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
+    console.log("AuthForm render ediliyor");
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            if (isRegistering) {
+                console.log("Kayıt yapılıyor:", email);
+                await createUserWithEmailAndPassword(auth, email, password);
+            } else {
+                console.log("Giriş yapılıyor:", email);
+                await signInWithEmailAndPassword(auth, email, password);
+            }
+        } catch (err) {
+            console.error("Auth hatası:", err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
-        localStorage.setItem("darkMode", darkMode);
-    }, [darkMode]);
-
-    useEffect(() => {
-        localStorage.setItem("language", language);
-    }, [language]);
-
-    const showPopup = (title, message) => {
-        setPopup({ title, message });
     };
 
     return (
-        <div className={`p-6 rounded-lg shadow-lg max-w-md w-full ${darkMode ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-900"}`}>
-            {popup && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg text-center w-80 text-gray-900">
-                        <h3 className="text-lg font-bold mb-2">{popup.title}</h3>
-                        <p className="mb-4">{popup.message}</p>
-                        <button
-                            onClick={() => setPopup(null)}
-                            className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
-                        >
-                            {translations[language].ok}
-                        </button>
-                    </div>
+        <div className="max-w-md w-full mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold text-center mb-4">
+                {isRegistering ? "Kayıt Ol" : "Giriş Yap"}
+            </h2>
+
+            {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {error}
                 </div>
             )}
-            <h2 className="text-xl font-bold mb-4 text-center">
-                {isRegistering ? translations[language].register : translations[language].login}
-            </h2>
-            <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                    if (isRegistering) {
-                        await registerUser(email, password);
-                        showPopup(translations[language].successRegister, "");
-                    } else {
-                        await loginUser(email, password);
-                        showPopup(translations[language].successLogin, "");
-                    }
-                } catch (error) {
-                    showPopup(translations[language].error, translations[language].errorMessage);
-                }
-            }} className="space-y-4">
-                <input
-                    type="email"
-                    placeholder="Email"
-                    className="w-full p-3 border rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="Şifre"
-                    className="w-full p-3 border rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium mb-1">E-posta</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        required
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium mb-1">Şifre</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full p-2 border rounded"
+                        required
+                    />
+                </div>
+
                 <button
                     type="submit"
-                    className="w-full p-3 bg-black text-white rounded-lg hover:bg-gray-800 transition"
+                    className="w-full p-2 bg-blue-600 text-white rounded"
+                    disabled={loading}
                 >
-                    {isRegistering ? translations[language].register : translations[language].login}
+                    {loading ? (
+                        "İşleniyor..."
+                    ) : isRegistering ? (
+                        "Kayıt Ol"
+                    ) : (
+                        "Giriş Yap"
+                    )}
                 </button>
             </form>
+
             <button
                 onClick={() => setIsRegistering(!isRegistering)}
-                className="mt-4 w-full p-3 bg-black text-white rounded-lg hover:bg-gray-800 transition block text-center font-semibold"
+                className="w-full mt-4 p-2 bg-gray-200 rounded"
             >
-                {isRegistering ? translations[language].haveAccount : translations[language].noAccount}
-            </button>
-            <button
-                onClick={() => {
-                    logoutUser();
-                    showPopup(translations[language].logout, "");
-                }}
-                className="mt-4 w-full p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-            >
-                {translations[language].logout}
+                {isRegistering
+                    ? "Zaten hesabın var mı? Giriş yap"
+                    : "Hesabın yok mu? Kayıt ol"}
             </button>
         </div>
     );

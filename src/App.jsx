@@ -12,6 +12,7 @@ import StatisticsDashboard from "./components/StatisticsDashboard";
 import Settings from "./components/Settings";
 import TodoService from "./services/TodoService";
 
+// Translations object
 const translations = {
     tr: {
         title: "Todo Uygulaması ⚡️",
@@ -57,7 +58,11 @@ const translations = {
             finance: 'Finans',
             education: 'Eğitim',
             other: 'Diğer'
-        }
+        },
+        loading: "Yükleniyor...",
+        error: "Hata",
+        tryAgain: "Tekrar Dene",
+        authError: "Kimlik doğrulama hatası"
     },
     en: {
         title: "Todo App ⚡️",
@@ -103,11 +108,15 @@ const translations = {
             finance: 'Finance',
             education: 'Education',
             other: 'Other'
-        }
+        },
+        loading: "Loading...",
+        error: "Error",
+        tryAgain: "Try Again",
+        authError: "Authentication error"
     }
 };
 
-// Category colors mapping
+// Category colors
 const categoryColors = {
     work: 'blue',
     personal: 'purple',
@@ -119,18 +128,17 @@ const categoryColors = {
 };
 
 const App = () => {
-    const [user] = useAuthState(auth);
+    console.log("App bileşeni render ediliyor");
+
+    // Auth state
+    const [user, loading, authError] = useAuthState(auth);
+
+    // App state
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
-    const [darkMode, setDarkMode] = useState(() => {
-        return localStorage.getItem("darkMode") === "true";
-    });
-    const [language, setLanguage] = useState(() => {
-        return localStorage.getItem("language") || "tr";
-    });
-    const [viewMode, setViewMode] = useState(() => {
-        return localStorage.getItem("viewMode") || "list";
-    });
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
+    const [language, setLanguage] = useState(() => localStorage.getItem("language") || "tr");
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem("viewMode") || "list");
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [tagFilter, setTagFilter] = useState(null);
@@ -138,22 +146,11 @@ const App = () => {
     const [showPomodoro, setShowPomodoro] = useState(false);
     const [showStatistics, setShowStatistics] = useState(false);
 
-    // Load todos when user logs in
-    useEffect(() => {
-        const loadTodos = async () => {
-            if (user) {
-                try {
-                    const todosData = await TodoService.getTodos();
-                    console.log("Loaded todos:", todosData);
-                    setTodos(todosData);
-                } catch (error) {
-                    console.error("Error loading todos:", error);
-                }
-            }
-        };
-
-        loadTodos();
-    }, [user]);
+    console.log("Auth durumu:", {
+        user: user?.uid,
+        loading,
+        error: authError?.message
+    });
 
     // Handle dark mode
     useEffect(() => {
@@ -175,10 +172,33 @@ const App = () => {
         localStorage.setItem("viewMode", viewMode);
     }, [viewMode]);
 
-    // Add todo
+    // Load todos when user changes
+    useEffect(() => {
+        const loadTodos = async () => {
+            console.log("useEffect çalışıyor, user:", user?.uid);
+
+            if (user) {
+                try {
+                    console.log("Todo yüklemesi başlıyor...");
+                    const todosData = await TodoService.getTodos();
+                    console.log("Yüklenen todo sayısı:", todosData.length);
+                    setTodos(todosData);
+                } catch (error) {
+                    console.error("Todo yükleme hatası:", error);
+                }
+            } else if (!loading) {
+                console.log("Kullanıcı giriş yapmamış, todo listesi temizleniyor");
+                setTodos([]);
+            }
+        };
+
+        loadTodos();
+    }, [user, loading]);
+
+    // Function handlers
     const handleAddTodo = async (newTodo) => {
         try {
-            console.log("Adding new todo:", newTodo);
+            console.log("Adding new todo");
             const updatedTodos = await TodoService.addTodo(newTodo);
             setTodos(updatedTodos);
         } catch (error) {
@@ -186,7 +206,6 @@ const App = () => {
         }
     };
 
-    // Toggle todo completion
     const handleToggleTodo = async (id) => {
         try {
             console.log("Toggling todo completion:", id);
@@ -197,7 +216,6 @@ const App = () => {
         }
     };
 
-    // Update todo status (for board view)
     const handleUpdateTodoStatus = async (id, status) => {
         try {
             console.log(`Updating todo ${id} status to ${status}`);
@@ -230,7 +248,6 @@ const App = () => {
         }
     };
 
-    // Remove todo
     const handleRemoveTodo = async (id) => {
         try {
             console.log("Removing todo:", id);
@@ -241,10 +258,9 @@ const App = () => {
         }
     };
 
-    // Update todo
     const handleUpdateTodo = async (updatedTodo) => {
         try {
-            console.log("Updating todo:", updatedTodo);
+            console.log("Updating todo:", updatedTodo.id);
             const updatedTodos = await TodoService.updateTodo(updatedTodo.id, updatedTodo);
             setTodos(updatedTodos);
         } catch (error) {
@@ -252,7 +268,6 @@ const App = () => {
         }
     };
 
-    // Get filtered todos
     const getFilteredTodos = () => {
         let filtered = [...todos];
 
@@ -299,19 +314,16 @@ const App = () => {
         }
     };
 
-    // Set view mode
     const setView = (mode) => {
         setViewMode(mode);
         setShowPomodoro(false);
         setShowStatistics(false);
     };
 
-    // Toggle settings
     const toggleSettings = () => {
         setSettingsOpen(!settingsOpen);
     };
 
-    // Toggle pomodoro
     const togglePomodoro = () => {
         setShowPomodoro(!showPomodoro);
         if (!showPomodoro) {
@@ -319,7 +331,6 @@ const App = () => {
         }
     };
 
-    // Toggle statistics
     const toggleStatistics = () => {
         setShowStatistics(!showStatistics);
         if (!showStatistics) {
@@ -327,11 +338,46 @@ const App = () => {
         }
     };
 
-    // Handle tag click
     const handleTagClick = (tag) => {
         setTagFilter(tag);
     };
 
+    // Loading state
+    if (loading) {
+        console.log("Kimlik doğrulama yükleniyor...");
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                    <div className="w-16 h-16 border-t-4 border-b-4 border-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xl">{translations[language].loading}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Auth error state
+    if (authError) {
+        console.error("Kimlik doğrulama hatası:", authError);
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                    <div className="text-red-500 text-6xl mb-4">❌</div>
+                    <h2 className="text-xl font-bold mb-2">{translations[language].authError}</h2>
+                    <p className="mb-4">{authError.message}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                    >
+                        {translations[language].tryAgain}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    console.log("User durumu:", user ? "Giriş yapılmış" : "Giriş yapılmamış");
+
+    // Main content
     return (
         <div className="h-screen w-screen flex items-stretch overflow-hidden bg-gray-100 dark:bg-gray-900">
             {user ? (

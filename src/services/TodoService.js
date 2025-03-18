@@ -1,5 +1,5 @@
 ﻿// src/services/TodoService.js
-import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs, query, where, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,6 +8,14 @@ class TodoService {
         this.localStorageKey = 'todos';
         this.pendingOperations = [];
         this.isOnline = navigator.onLine;
+
+        // Load any pending operations from localStorage
+        try {
+            this.pendingOperations = JSON.parse(localStorage.getItem('pendingOperations') || '[]');
+        } catch (e) {
+            console.error("Error loading pending operations:", e);
+            this.pendingOperations = [];
+        }
 
         // Listen for online/offline events
         window.addEventListener('online', () => {
@@ -33,6 +41,9 @@ class TodoService {
 
         // Process in background, don't block UI
         setTimeout(async () => {
+            // Create a new array to track failed operations
+            const failedOps = [];
+
             for (const op of pendingOps) {
                 try {
                     if (op.type === 'add') {
@@ -45,14 +56,20 @@ class TodoService {
                 } catch (error) {
                     console.error("Error processing pending operation:", error);
                     // Keep failed operations for retry
-                    continue;
+                    failedOps.push(op);
                 }
             }
 
-            // Clear processed operations
-            localStorage.setItem('pendingOperations', '[]');
-            this.pendingOperations = [];
+            // Update pending operations with only the failed ones
+            this.pendingOperations = failedOps;
+            localStorage.setItem('pendingOperations', JSON.stringify(failedOps));
         }, 100);
+    }
+
+    // Get user-specific localStorage key
+    getUserStorageKey() {
+        const uid = auth.currentUser?.uid || 'anonymous';
+        return `${this.localStorageKey}_${uid}`;
     }
 
     // Get todos - prioritize localStorage for speed
@@ -89,19 +106,21 @@ class TodoService {
         return localTodos;
     }
 
-    // Get todos from localStorage
+    // Get todos from localStorage (user-specific)
     getLocalTodos() {
+        const storageKey = this.getUserStorageKey();
         try {
-            return JSON.parse(localStorage.getItem(this.localStorageKey)) || [];
+            return JSON.parse(localStorage.getItem(storageKey)) || [];
         } catch (error) {
             console.error("Error getting local todos:", error);
             return [];
         }
     }
 
-    // Save todos to localStorage
+    // Save todos to localStorage (user-specific)
     saveLocalTodos(todos) {
-        localStorage.setItem(this.localStorageKey, JSON.stringify(todos));
+        const storageKey = this.getUserStorageKey();
+        localStorage.setItem(storageKey, JSON.stringify(todos));
         return todos;
     }
 
@@ -112,7 +131,7 @@ class TodoService {
         const todoWithId = {
             ...newTodo,
             id: newTodo.id || uuidv4(),
-            userId: auth.currentUser?.uid || 'local-user',
+            userId: auth.currentUser?.uid || 'anonymous',
             createdAt: new Date().toISOString()
         };
 
@@ -150,40 +169,47 @@ class TodoService {
     async toggleTodoCompletion(id) {
         // Update in localStorage immediately
         const todos = this.getLocalTodos();
-        const updatedTodos = todos.map(todo => {
-            if (todo.id === id) {
-                const completed = !todo.completed;
-                return {
-                    ...todo,
-                    completed,
-                    completedAt: completed ? new Date().toISOString() : null
-                };
-            }
-            return todo;
-        });
+        const todoIndex = todos.findIndex(todo => todo.id === id);
+
+        if (todoIndex === -1) return todos;
+
+        const todoToUpdate = todos[todoIndex];
+
+        // Verify the todo belongs to the current user
+        if (auth.currentUser && todoToUpdate.userId !== auth.currentUser.uid) {
+            console.error("Cannot update todo that doesn't belong to current user");
+            return todos;
+        }
+
+        const completed = !todoToUpdate.completed;
+        const updatedTodo = {
+            ...todoToUpdate,
+            completed,
+            completedAt: completed ? new Date().toISOString() : null
+        };
+
+        const updatedTodos = [...todos];
+        updatedTodos[todoIndex] = updatedTodo;
 
         this.saveLocalTodos(updatedTodos);
 
         // Queue Firebase update if online
         if (this.isOnline && auth.currentUser) {
-            const todoToUpdate = updatedTodos.find(t => t.id === id);
-            if (todoToUpdate) {
-                this.queueOperation({
-                    type: 'update',
-                    id,
-                    data: {
-                        completed: todoToUpdate.completed,
-                        completedAt: todoToUpdate.completedAt
-                    }
-                });
+            this.queueOperation({
+                type: 'update',
+                id,
+                data: {
+                    completed: updatedTodo.completed,
+                    completedAt: updatedTodo.completedAt
+                }
+            });
 
-                this.syncUpdateToFirebase(id, {
-                    completed: todoToUpdate.completed,
-                    completedAt: todoToUpdate.completedAt
-                }).catch(error => {
-                    console.error("Background Firebase toggle failed:", error);
-                });
-            }
+            this.syncUpdateToFirebase(id, {
+                completed: updatedTodo.completed,
+                completedAt: updatedTodo.completedAt
+            }).catch(error => {
+                console.error("Background Firebase toggle failed:", error);
+            });
         }
 
         return updatedTodos;
@@ -193,42 +219,49 @@ class TodoService {
     async updateTodoStatus(id, status) {
         // Update in localStorage immediately
         const todos = this.getLocalTodos();
-        const updatedTodos = todos.map(todo => {
-            if (todo.id === id) {
-                return {
-                    ...todo,
-                    inProgress: status === 'inProgress',
-                    completed: status === 'completed',
-                    completedAt: status === 'completed' ? new Date().toISOString() : null
-                };
-            }
-            return todo;
-        });
+        const todoIndex = todos.findIndex(todo => todo.id === id);
+
+        if (todoIndex === -1) return todos;
+
+        const todoToUpdate = todos[todoIndex];
+
+        // Verify the todo belongs to the current user
+        if (auth.currentUser && todoToUpdate.userId !== auth.currentUser.uid) {
+            console.error("Cannot update todo that doesn't belong to current user");
+            return todos;
+        }
+
+        const updatedTodo = {
+            ...todoToUpdate,
+            inProgress: status === 'inProgress',
+            completed: status === 'completed',
+            completedAt: status === 'completed' ? new Date().toISOString() : null
+        };
+
+        const updatedTodos = [...todos];
+        updatedTodos[todoIndex] = updatedTodo;
 
         this.saveLocalTodos(updatedTodos);
 
         // Queue Firebase update if online
         if (this.isOnline && auth.currentUser) {
-            const todoToUpdate = updatedTodos.find(t => t.id === id);
-            if (todoToUpdate) {
-                this.queueOperation({
-                    type: 'update',
-                    id,
-                    data: {
-                        inProgress: todoToUpdate.inProgress,
-                        completed: todoToUpdate.completed,
-                        completedAt: todoToUpdate.completedAt
-                    }
-                });
+            this.queueOperation({
+                type: 'update',
+                id,
+                data: {
+                    inProgress: updatedTodo.inProgress,
+                    completed: updatedTodo.completed,
+                    completedAt: updatedTodo.completedAt
+                }
+            });
 
-                this.syncUpdateToFirebase(id, {
-                    inProgress: todoToUpdate.inProgress,
-                    completed: todoToUpdate.completed,
-                    completedAt: todoToUpdate.completedAt
-                }).catch(error => {
-                    console.error("Background Firebase status update failed:", error);
-                });
-            }
+            this.syncUpdateToFirebase(id, {
+                inProgress: updatedTodo.inProgress,
+                completed: updatedTodo.completed,
+                completedAt: updatedTodo.completedAt
+            }).catch(error => {
+                console.error("Background Firebase status update failed:", error);
+            });
         }
 
         return updatedTodos;
@@ -239,7 +272,20 @@ class TodoService {
         if (!this.isOnline || !auth.currentUser) return;
 
         try {
+            // First check if this document belongs to the current user
             const todoRef = doc(db, "todos", id);
+            const todoSnap = await getDoc(todoRef);
+
+            if (!todoSnap.exists()) {
+                throw new Error("Todo not found");
+            }
+
+            const todoData = todoSnap.data();
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Cannot update todo that doesn't belong to current user");
+            }
+
+            // Proceed with update
             await updateDoc(todoRef, {
                 ...data,
                 updatedAt: new Date().toISOString()
@@ -254,6 +300,16 @@ class TodoService {
     async removeTodo(id) {
         // Remove from localStorage immediately
         const todos = this.getLocalTodos();
+        const todoToDelete = todos.find(todo => todo.id === id);
+
+        if (!todoToDelete) return todos;
+
+        // Verify the todo belongs to the current user
+        if (auth.currentUser && todoToDelete.userId !== auth.currentUser.uid) {
+            console.error("Cannot delete todo that doesn't belong to current user");
+            return todos;
+        }
+
         const updatedTodos = todos.filter(todo => todo.id !== id);
         this.saveLocalTodos(updatedTodos);
 
@@ -273,7 +329,20 @@ class TodoService {
         if (!this.isOnline || !auth.currentUser) return;
 
         try {
+            // First check if this document belongs to the current user
             const todoRef = doc(db, "todos", id);
+            const todoSnap = await getDoc(todoRef);
+
+            if (!todoSnap.exists()) {
+                throw new Error("Todo not found");
+            }
+
+            const todoData = todoSnap.data();
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Cannot delete todo that doesn't belong to current user");
+            }
+
+            // Proceed with delete
             await deleteDoc(todoRef);
         } catch (error) {
             console.error("Firebase delete failed:", error);
@@ -285,16 +354,28 @@ class TodoService {
     async updateTodo(id, updatedTodo) {
         // Update in localStorage immediately
         const todos = this.getLocalTodos();
-        const updatedTodos = todos.map(todo => {
-            if (todo.id === id) {
-                return {
-                    ...todo,
-                    ...updatedTodo,
-                    id // Make sure id doesn't change
-                };
-            }
-            return todo;
-        });
+        const todoIndex = todos.findIndex(todo => todo.id === id);
+
+        if (todoIndex === -1) return todos;
+
+        const existingTodo = todos[todoIndex];
+
+        // Verify the todo belongs to the current user
+        if (auth.currentUser && existingTodo.userId !== auth.currentUser.uid) {
+            console.error("Cannot update todo that doesn't belong to current user");
+            return todos;
+        }
+
+        // Preserve the userId and id fields
+        const mergedTodo = {
+            ...existingTodo,
+            ...updatedTodo,
+            id: existingTodo.id,
+            userId: existingTodo.userId
+        };
+
+        const updatedTodos = [...todos];
+        updatedTodos[todoIndex] = mergedTodo;
 
         this.saveLocalTodos(updatedTodos);
 
