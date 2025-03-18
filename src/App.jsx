@@ -142,8 +142,13 @@ const App = () => {
     useEffect(() => {
         const loadTodos = async () => {
             if (user) {
-                const todosData = await TodoService.getTodos();
-                setTodos(todosData);
+                try {
+                    const todosData = await TodoService.getTodos();
+                    console.log("Loaded todos:", todosData);
+                    setTodos(todosData);
+                } catch (error) {
+                    console.error("Error loading todos:", error);
+                }
             }
         };
 
@@ -172,32 +177,79 @@ const App = () => {
 
     // Add todo
     const handleAddTodo = async (newTodo) => {
-        const updatedTodos = await TodoService.addTodo(newTodo);
-        setTodos(updatedTodos);
+        try {
+            console.log("Adding new todo:", newTodo);
+            const updatedTodos = await TodoService.addTodo(newTodo);
+            setTodos(updatedTodos);
+        } catch (error) {
+            console.error("Error adding todo:", error);
+        }
     };
 
     // Toggle todo completion
     const handleToggleTodo = async (id) => {
-        const updatedTodos = await TodoService.toggleTodoCompletion(id);
-        setTodos(updatedTodos);
+        try {
+            console.log("Toggling todo completion:", id);
+            const updatedTodos = await TodoService.toggleTodoCompletion(id);
+            setTodos(updatedTodos);
+        } catch (error) {
+            console.error("Error toggling todo completion:", error);
+        }
     };
 
-    // Update todo status
+    // Update todo status (for board view)
     const handleUpdateTodoStatus = async (id, status) => {
-        const updatedTodos = await TodoService.updateTodoStatus(id, status);
-        setTodos(updatedTodos);
+        try {
+            console.log(`Updating todo ${id} status to ${status}`);
+
+            // First update our local state immediately for better UI responsiveness
+            setTodos(prevTodos => prevTodos.map(todo => {
+                if (todo.id === id) {
+                    return {
+                        ...todo,
+                        inProgress: status === 'inProgress',
+                        completed: status === 'completed',
+                        completedAt: status === 'completed' ? new Date().toISOString() : null
+                    };
+                }
+                return todo;
+            }));
+
+            // Then update in the service
+            const updatedTodos = await TodoService.updateTodoStatus(id, status);
+
+            // If the service returns updated todos, use them
+            if (updatedTodos) {
+                setTodos(updatedTodos);
+            }
+        } catch (error) {
+            console.error("Error updating todo status:", error);
+            // Revert to original todos if there's an error
+            const originalTodos = await TodoService.getTodos();
+            setTodos(originalTodos);
+        }
     };
 
     // Remove todo
     const handleRemoveTodo = async (id) => {
-        const updatedTodos = await TodoService.removeTodo(id);
-        setTodos(updatedTodos);
+        try {
+            console.log("Removing todo:", id);
+            const updatedTodos = await TodoService.removeTodo(id);
+            setTodos(updatedTodos);
+        } catch (error) {
+            console.error("Error removing todo:", error);
+        }
     };
 
     // Update todo
     const handleUpdateTodo = async (updatedTodo) => {
-        const updatedTodos = await TodoService.updateTodo(updatedTodo.id, updatedTodo);
-        setTodos(updatedTodos);
+        try {
+            console.log("Updating todo:", updatedTodo);
+            const updatedTodos = await TodoService.updateTodo(updatedTodo.id, updatedTodo);
+            setTodos(updatedTodos);
+        } catch (error) {
+            console.error("Error updating todo:", error);
+        }
     };
 
     // Get filtered todos

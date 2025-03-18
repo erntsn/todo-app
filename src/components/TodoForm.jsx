@@ -1,5 +1,5 @@
 ﻿import React, { useState } from 'react';
-import generateId from '../utils/idGenerator';
+import { v4 as uuidv4 } from 'uuid';
 import TagsInput from './TagsInput';
 import CategorySelector from './CategorySelector';
 
@@ -21,9 +21,9 @@ const TodoForm = ({ onAdd, language, translations, darkMode }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (text.trim()) {
-            onAdd({
-                id: generateId(),
-                text,
+            const newTodo = {
+                id: uuidv4(),
+                text: text.trim(),
                 completed: false,
                 date,
                 priority,
@@ -33,8 +33,12 @@ const TodoForm = ({ onAdd, language, translations, darkMode }) => {
                     type: recurrenceType,
                     value: recurrenceValue,
                     nextDate: date, // Start with the selected date
-                } : null
-            });
+                } : null,
+                createdAt: new Date().toISOString()
+            };
+
+            console.log("Adding new todo:", newTodo);
+            onAdd(newTodo);
 
             // Reset form
             setText('');
@@ -126,9 +130,9 @@ const TodoForm = ({ onAdd, language, translations, darkMode }) => {
                         </select>
 
                         <div className="flex">
-              <span className={`px-2 py-1 rounded-l ${darkMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
-                {translations[language].every}
-              </span>
+                            <span className={`px-2 py-1 rounded-l ${darkMode ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                                {translations[language].every}
+                            </span>
                             <input
                                 type="number"
                                 min="1"
