@@ -23,8 +23,29 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
         setSelectedTodo(null);
     };
 
-    const handleUpdateTodo = (updatedTodo) => {
-        onUpdate(updatedTodo);
+    const handleDeleteTodo = (id, e) => {
+        e.stopPropagation(); // Prevent card click
+        console.log("Deleting todo with ID:", id);
+
+        if (window.confirm(language === 'tr' ? 'Bu görevi silmek istediğinize emin misiniz?' : 'Are you sure you want to delete this task?')) {
+            try {
+                onRemove(id);
+            } catch (error) {
+                console.error("Error in handleDeleteTodo:", error);
+                alert(language === 'tr' ? 'Silme işlemi başarısız oldu.' : 'Delete operation failed.');
+            }
+        }
+    };
+
+    const handleUpdateTodo = async (updatedTodo) => {
+        console.log("TodoList updating todo:", updatedTodo);
+        try {
+            await onUpdate(updatedTodo);
+            handleCloseModal();
+        } catch (error) {
+            console.error("Error in handleUpdateTodo:", error);
+            alert(language === 'tr' ? 'Güncelleme işlemi başarısız oldu.' : 'Update operation failed.');
+        }
     };
 
     return (
@@ -96,11 +117,8 @@ const TodoList = ({ todos = [], onToggle, onRemove, onUpdate, onTagClick, langua
                             </div>
                         </div>
                         <button
-                            className="text-red-500 hover:text-red-600 transition font-bold"
-                            onClick={(e) => {
-                                e.stopPropagation(); // Prevent card click
-                                onRemove(todo.id);
-                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
+                            onClick={(e) => handleDeleteTodo(todo.id, e)}
                         >
                             {language === 'tr' ? 'Sil' : 'Delete'}
                         </button>

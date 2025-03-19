@@ -17,6 +17,8 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
     const [isRecurring, setIsRecurring] = useState(!!todo.recurring);
     const [recurrenceType, setRecurrenceType] = useState(todo.recurring?.type || 'daily');
     const [recurrenceValue, setRecurrenceValue] = useState(todo.recurring?.value || 1);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -31,19 +33,49 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
         setEditedTodo(prev => ({ ...prev, tags }));
     };
 
-    const handleSave = () => {
-        // Update recurring settings
-        const updatedTodo = {
-            ...editedTodo,
-            recurring: isRecurring ? {
-                type: recurrenceType,
-                value: recurrenceValue,
-                nextDate: editedTodo.date,
-            } : null
-        };
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            // Update recurring settings
+            const updatedTodo = {
+                ...editedTodo,
+                id: todo.id, // Ensure ID is included
+                recurring: isRecurring ? {
+                    type: recurrenceType,
+                    value: parseInt(recurrenceValue, 10),
+                    nextDate: editedTodo.date,
+                } : null
+            };
 
-        onUpdate(updatedTodo);
-        onClose();
+            console.log("Saving updated todo:", updatedTodo);
+            await onUpdate(updatedTodo);
+            onClose();
+        } catch (error) {
+            console.error("Error saving todo:", error);
+            alert(language === 'tr' ? 'Kaydetme hatası oluştu' : 'Error saving changes');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        const confirmMessage = language === 'tr'
+            ? 'Bu görevi silmek istediğinize emin misiniz?'
+            : 'Are you sure you want to delete this task?';
+
+        if (window.confirm(confirmMessage)) {
+            try {
+                setIsDeleting(true);
+                console.log("Deleting todo with ID:", todo.id);
+                await onDelete(todo.id);
+                onClose();
+            } catch (error) {
+                console.error("Error deleting todo:", error);
+                alert(language === 'tr' ? 'Silme hatası oluştu' : 'Error deleting task');
+            } finally {
+                setIsDeleting(false);
+            }
+        }
     };
 
     const handleToggleComplete = () => {
@@ -58,8 +90,11 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
         tr: {
             title: 'Görev Detayları',
             delete: 'Sil',
+            deleteConfirm: 'Bu görevi silmek istediğinize emin misiniz?',
             cancel: 'İptal',
             save: 'Kaydet',
+            saving: 'Kaydediliyor...',
+            deleting: 'Siliniyor...',
             notes: 'Notlar',
             date: 'Tarih',
             priority: {
@@ -76,8 +111,11 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
         en: {
             title: 'Task Details',
             delete: 'Delete',
+            deleteConfirm: 'Are you sure you want to delete this task?',
             cancel: 'Cancel',
             save: 'Save',
+            saving: 'Saving...',
+            deleting: 'Deleting...',
             notes: 'Notes',
             date: 'Date',
             priority: {
@@ -261,15 +299,11 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                     {/* Action buttons */}
                     <div className="flex justify-between mt-6">
                         <button
-                            onClick={() => {
-                                if (window.confirm(t.confirmDelete)) {
-                                    onDelete(todo.id);
-                                    onClose();
-                                }
-                            }}
-                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {t.delete}
+                            {isDeleting ? t.deleting : t.delete}
                         </button>
 
                         <div className="space-x-2">
@@ -282,9 +316,10 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {t.save}
+                                {isSaving ? t.saving : t.save}
                             </button>
                         </div>
                     </div>

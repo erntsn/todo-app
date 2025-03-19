@@ -11,6 +11,8 @@ import PomodoroTimer from "./components/PomodoroTimer";
 import StatisticsDashboard from "./components/StatisticsDashboard";
 import Settings from "./components/Settings";
 import TodoService from "./services/TodoService";
+import { doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { db } from "./firebaseConfig";
 
 // Translations object
 const translations = {
@@ -194,7 +196,53 @@ const App = () => {
         loadTodos();
     }, [user, loading]);
 
-    // Function handlers
+
+    const directDeleteTodo = async (id) => {
+        try {
+            console.log("Using direct delete for todo ID:", id);
+            await deleteDoc(doc(db, "todos", id));
+            console.log("Todo deleted directly:", id);
+
+            // Refresh todos after deletion
+            const updatedTodos = await TodoService.getTodos();
+            setTodos(updatedTodos);
+            return true;
+        } catch (error) {
+            console.error("Direct delete error:", error);
+            alert(language === 'tr' ? 'Direkt silme işlemi başarısız: ' + error.message : 'Direct delete failed: ' + error.message);
+            return false;
+        }
+    };
+
+// Direct update function (bypasses TodoService)
+    const directUpdateTodo = async (id, data) => {
+        try {
+            console.log("Using direct update for todo ID:", id, data);
+
+            // Remove id from data if present
+            const { id: _, ...updateData } = data;
+
+            await updateDoc(doc(db, "todos", id), {
+                ...updateData,
+                updatedAt: new Date().toISOString()
+            });
+            console.log("Todo updated directly:", id);
+
+            // Refresh todos after update
+            const updatedTodos = await TodoService.getTodos();
+            setTodos(updatedTodos);
+            return true;
+        } catch (error) {
+            console.error("Direct update error:", error);
+            alert(language === 'tr' ? 'Direkt güncelleme işlemi başarısız: ' + error.message : 'Direct update failed: ' + error.message);
+            return false;
+        }
+    };
+
+
+// These are the critical handler functions from App.jsx that need to be fixed
+
+// Function handlers
     const handleAddTodo = async (newTodo) => {
         try {
             console.log("Adding new todo");
@@ -202,6 +250,7 @@ const App = () => {
             setTodos(updatedTodos);
         } catch (error) {
             console.error("Error adding todo:", error);
+            alert(language === 'tr' ? 'Görev eklenirken bir hata oluştu.' : 'Error adding task.');
         }
     };
 
@@ -212,49 +261,52 @@ const App = () => {
             setTodos(updatedTodos);
         } catch (error) {
             console.error("Error toggling todo completion:", error);
+            alert(language === 'tr' ? 'Görev durumu değiştirilirken bir hata oluştu.' : 'Error toggling task status.');
         }
     };
 
     const handleUpdateTodoStatus = async (id, status) => {
         try {
             console.log(`Todo durumu güncelleniyor: ${id}, hedef durum: ${status}`);
-
-            // Backend güncellemesini başlat, ancak sonucunu bekletme
-            try {
-                // TodoService çağrısı (async)
-                TodoService.updateTodoStatus(id, status)
-                    .then(updatedTodos => {
-                        // Başarılı istek sonrası bir şey yapmak gerekiyorsa
-                        console.log("Backend güncelleme başarılı");
-                    })
-                    .catch(error => {
-                        console.error("Backend güncellemede hata:", error);
-                    });
-            } catch (error) {
-                console.error("Todo durumu güncellenirken hata:", error);
-            }
+            const updatedTodos = await TodoService.updateTodoStatus(id, status);
+            setTodos(updatedTodos);
         } catch (error) {
-            console.error("Durum güncelleme hatası:", error);
+            console.error("Todo durumu güncellenirken hata:", error);
+            alert(language === 'tr' ? 'Görev durumu güncellenirken bir hata oluştu.' : 'Error updating task status.');
         }
     };
 
     const handleRemoveTodo = async (id) => {
+        if (!id) {
+            console.error("Invalid ID provided to handleRemoveTodo");
+            return;
+        }
+
         try {
-            console.log("Removing todo:", id);
+            console.log("Removing todo with ID:", id);
             const updatedTodos = await TodoService.removeTodo(id);
+            console.log("Received updated todos after remove:", updatedTodos?.length);
             setTodos(updatedTodos);
         } catch (error) {
             console.error("Error removing todo:", error);
+            alert(language === 'tr' ? 'Görev silinirken bir hata oluştu.' : 'Error removing task.');
         }
     };
 
     const handleUpdateTodo = async (updatedTodo) => {
+        if (!updatedTodo || !updatedTodo.id) {
+            console.error("Invalid todo or missing ID in handleUpdateTodo", updatedTodo);
+            return;
+        }
+
         try {
             console.log("Updating todo:", updatedTodo.id);
             const updatedTodos = await TodoService.updateTodo(updatedTodo.id, updatedTodo);
+            console.log("Received updated todos after update:", updatedTodos?.length);
             setTodos(updatedTodos);
         } catch (error) {
             console.error("Error updating todo:", error);
+            alert(language === 'tr' ? 'Görev güncellenirken bir hata oluştu.' : 'Error updating task.');
         }
     };
 

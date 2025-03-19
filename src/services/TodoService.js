@@ -1,19 +1,18 @@
 ﻿// src/services/TodoService.js
-import { collection, addDoc, doc, updateDoc, deleteDoc, getDocs, query, where } from "firebase/firestore";
+import { doc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, where, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebaseConfig";
 
 class TodoService {
     // Get todos from Firestore
     async getTodos() {
-        console.log("TodoService.getTodos çağrıldı");
+        console.log("TodoService.getTodos called");
 
         try {
             if (!auth.currentUser) {
-                console.log("Kullanıcı giriş yapmamış, boş dizi döndürülüyor");
+                console.log("User not logged in, returning empty array");
                 return [];
             }
 
-            console.log("Firestore'dan kullanıcının todolarını alıyor:", auth.currentUser.uid);
             const todosRef = collection(db, "todos");
             const q = query(todosRef, where("userId", "==", auth.currentUser.uid));
             const querySnapshot = await getDocs(q);
@@ -26,171 +25,169 @@ class TodoService {
                 });
             });
 
-            console.log("Bulunan todo sayısı:", todos.length);
+            console.log(`Found ${todos.length} todos for user ${auth.currentUser.uid}`);
             return todos;
         } catch (error) {
-            console.error("Todos alınırken hata:", error);
-            throw error;
+            console.error("Error fetching todos:", error);
+            throw new Error("Görevler yüklenirken hata oluştu.");
         }
     }
 
     // Add a new todo
     async addTodo(newTodo) {
-        console.log("TodoService.addTodo çağrıldı");
+        console.log("TodoService.addTodo called");
 
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            const todoWithId = {
+            // Prepare the todo object
+            const todoData = {
                 ...newTodo,
                 userId: auth.currentUser.uid,
                 createdAt: new Date().toISOString()
             };
 
-            console.log("Firebase'e todo ekleniyor:", todoWithId);
-            const docRef = await addDoc(collection(db, "todos"), todoWithId);
-            console.log("Todo eklendi, ID:", docRef.id);
+            // Add the document to Firestore
+            await addDoc(collection(db, "todos"), todoData);
+            console.log("Todo added successfully");
 
-            // Refresh todos from Firestore
-            return await this.getTodos();
+            // Return updated list
+            return this.getTodos();
         } catch (error) {
-            console.error("Todo eklerken hata:", error);
-            throw error;
+            console.error("Error adding todo:", error);
+            throw new Error("Görev eklenirken hata oluştu.");
         }
     }
 
     // Toggle todo completion
     async toggleTodoCompletion(id) {
-        console.log("TodoService.toggleTodoCompletion çağrıldı");
+        console.log(`TodoService.toggleTodoCompletion called for id: ${id}`);
 
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            // Get current todos
-            const todos = await this.getTodos();
-            const todoToUpdate = todos.find(todo => todo.id === id);
+            // Get current todo
+            const todoRef = doc(db, "todos", id);
+            const todoSnap = await getDoc(todoRef);
 
-            if (!todoToUpdate) {
+            if (!todoSnap.exists()) {
                 throw new Error("Todo bulunamadı");
             }
 
-            const completed = !todoToUpdate.completed;
+            const todoData = todoSnap.data();
 
-            console.log("Todo durumu güncelleniyor:", id, "tamamlandı =", completed);
-            await updateDoc(doc(db, "todos", id), {
+            // Only update if this todo belongs to the current user
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Bu görev size ait değil");
+            }
+
+            const completed = !todoData.completed;
+
+            // Update the todo
+            await updateDoc(todoRef, {
                 completed,
                 completedAt: completed ? new Date().toISOString() : null
             });
 
-            // Refresh todos from Firestore
-            return await this.getTodos();
+            console.log(`Todo ${id} completion status toggled to ${completed}`);
+
+            // Return updated list
+            return this.getTodos();
         } catch (error) {
-            console.error("Todo durumu güncellenirken hata:", error);
-            throw error;
+            console.error("Error toggling todo completion:", error);
+            throw new Error("Görev durumu değiştirilirken hata oluştu.");
         }
     }
 
-// Update todo status
+    // Update todo status
     async updateTodoStatus(id, status) {
-        console.log("TodoService.updateTodoStatus çağrıldı:", id, status);
+        console.log(`TodoService.updateTodoStatus called for id: ${id}, status: ${status}`);
 
         try {
             if (!auth.currentUser) {
-                console.log("Kullanıcı giriş yapmamış");
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            // Durum verilerini hazırla
-            let statusData = {};
+            // Prepare status data
+            const statusData = {};
 
-            if (status === 'completed') {
-                statusData = {
-                    inProgress: false,
-                    completed: true,
-                    completedAt: new Date().toISOString()
-                };
-            } else if (status === 'inProgress') {
-                statusData = {
-                    inProgress: true,
-                    completed: false,
-                    completedAt: null
-                };
-            } else if (status === 'todo') {
-                statusData = {
-                    inProgress: false,
-                    completed: false,
-                    completedAt: null
-                };
+            if (status === 'completed' || status === 'done') {
+                statusData.status = status;
+                statusData.completed = true;
+                statusData.completedAt = new Date().toISOString();
             } else {
-                console.warn("Bilinmeyen durum:", status);
-                throw new Error("Geçersiz durum değeri");
+                statusData.status = status;
+                statusData.completed = false;
+                statusData.completedAt = null;
             }
 
-            console.log("Todo durumu güncelleniyor:", id, "yeni durum =", status, statusData);
-
-            // Firestore'da dökümanı güncelle
+            // Update the todo directly
             const todoRef = doc(db, "todos", id);
             await updateDoc(todoRef, {
                 ...statusData,
                 updatedAt: new Date().toISOString()
             });
 
-            console.log("Todo durumu başarıyla güncellendi");
+            console.log(`Todo ${id} status updated to ${status}`);
 
-            // Firestore'dan güncel todoları al
-            return await this.getTodos();
+            // Return updated list
+            return this.getTodos();
         } catch (error) {
-            console.error("Todo durumu güncellenirken hata:", error);
-            throw error;
+            console.error("Error updating todo status:", error);
+            throw new Error("Görev durumu güncellenirken hata oluştu.");
         }
     }
 
     // Remove todo
     async removeTodo(id) {
-        console.log("TodoService.removeTodo çağrıldı");
+        console.log(`TodoService.removeTodo called for id: ${id}`);
 
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            console.log("Todo siliniyor:", id);
+            // Delete directly without additional checks to simplify
             await deleteDoc(doc(db, "todos", id));
+            console.log(`Todo ${id} deleted successfully`);
 
-            // Refresh todos from Firestore
-            return await this.getTodos();
+            // Return updated list
+            return this.getTodos();
         } catch (error) {
-            console.error("Todo silinirken hata:", error);
-            throw error;
+            console.error("Error removing todo:", error.message, error.stack);
+            throw new Error("Görev silinirken hata oluştu.");
         }
     }
 
     // Update todo
     async updateTodo(id, updatedTodo) {
-        console.log("TodoService.updateTodo çağrıldı");
+        console.log(`TodoService.updateTodo called for id: ${id}`);
 
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            console.log("Todo güncelleniyor:", id);
+            // Remove id from data to update if it exists
             const { id: _, ...dataToUpdate } = updatedTodo;
 
+            // Update directly
             await updateDoc(doc(db, "todos", id), {
                 ...dataToUpdate,
                 updatedAt: new Date().toISOString()
             });
 
-            // Refresh todos from Firestore
-            return await this.getTodos();
+            console.log(`Todo ${id} updated successfully`);
+
+            // Return updated list
+            return this.getTodos();
         } catch (error) {
-            console.error("Todo güncellenirken hata:", error);
-            throw error;
+            console.error("Error updating todo:", error.message, error.stack);
+            throw new Error("Görev güncellenirken hata oluştu.");
         }
     }
 }

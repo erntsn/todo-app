@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import TaskDetailModal from "./TaskDetailModal";
 
 const TrelloBoard = ({
                          todos,
@@ -22,6 +23,10 @@ const TrelloBoard = ({
     // Dragging state
     const [draggedTodo, setDraggedTodo] = useState(null);
     const [dragOverColumn, setDragOverColumn] = useState(null);
+
+    // Add state for selected todo (for detail modal)
+    const [selectedTodo, setSelectedTodo] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Translate column titles
     const columnTitles = {
@@ -54,6 +59,60 @@ const TrelloBoard = ({
         setLocalColumns(newColumns);
     }, [todos]);
 
+    // Handle opening the detail modal
+    const handleCardClick = (todo) => {
+        if (!draggedTodo) {  // Only open if not dragging
+            console.log("Opening task details for:", todo.id);
+            setSelectedTodo(todo);
+        }
+    };
+
+    // Handle closing the detail modal
+    const handleCloseModal = () => {
+        setSelectedTodo(null);
+    };
+
+    // Handle updating a todo from the modal
+    const handleUpdateTodo = async (updatedTodo) => {
+        console.log("TrelloBoard updating todo:", updatedTodo);
+        try {
+            await onUpdate(updatedTodo);
+            handleCloseModal();
+        } catch (error) {
+            console.error("Error in handleUpdateTodo:", error);
+            alert(language === 'tr' ? 'Güncelleme işlemi başarısız oldu.' : 'Update operation failed.');
+        }
+    };
+
+    // Handle delete from anywhere in the component
+    const handleDeleteTodo = async (id, e) => {
+        if (e) {
+            e.stopPropagation(); // Prevent other click handlers
+        }
+
+        console.log("TrelloBoard deleting todo with ID:", id);
+
+        const confirmMessage = language === 'tr'
+            ? 'Bu görevi silmek istediğinize emin misiniz?'
+            : 'Are you sure you want to delete this task?';
+
+        if (window.confirm(confirmMessage)) {
+            try {
+                setIsDeleting(true);
+                await onRemove(id);
+                // Close modal if the deleted todo is the selected one
+                if (selectedTodo && selectedTodo.id === id) {
+                    handleCloseModal();
+                }
+            } catch (error) {
+                console.error("Error deleting todo:", error);
+                alert(language === 'tr' ? 'Silme işlemi başarısız oldu.' : 'Delete operation failed.');
+            } finally {
+                setIsDeleting(false);
+            }
+        }
+    };
+
     // Drag start handler
     const handleDragStart = (e, todo) => {
         setDraggedTodo(todo);
@@ -69,6 +128,11 @@ const TrelloBoard = ({
     const handleDragEnd = (e) => {
         e.target.classList.remove('dragging');
         setDragOverColumn(null);
+
+        // Clear dragged todo after a short delay to allow click events
+        setTimeout(() => {
+            setDraggedTodo(null);
+        }, 50);
     };
 
     // Drag over handler
@@ -93,17 +157,24 @@ const TrelloBoard = ({
 
         // Don't do anything if dropped in the same column
         const currentStatus = draggedTodo.status || (draggedTodo.completed ? 'done' : 'todo');
-        if (currentStatus === columnName) return;
+        if (currentStatus === columnName) {
+            setDraggedTodo(null);
+            return;
+        }
 
         // Update the todo status
         if (onUpdateStatus) {
-            onUpdateStatus(draggedTodo.id, columnName);
+            try {
+                onUpdateStatus(draggedTodo.id, columnName);
 
-            // Also update completed status if appropriate
-            if (columnName === 'done' && !draggedTodo.completed) {
-                onToggle(draggedTodo.id);
-            } else if (columnName !== 'done' && draggedTodo.completed) {
-                onToggle(draggedTodo.id);
+                // Also update completed status if appropriate
+                if (columnName === 'done' && !draggedTodo.completed) {
+                    onToggle(draggedTodo.id);
+                } else if (columnName !== 'done' && draggedTodo.completed) {
+                    onToggle(draggedTodo.id);
+                }
+            } catch (error) {
+                console.error("Error updating status:", error);
             }
         }
 
@@ -157,6 +228,11 @@ const TrelloBoard = ({
                 draggable
                 onDragStart={(e) => handleDragStart(e, todo)}
                 onDragEnd={handleDragEnd}
+                onClick={(e) => {
+                    if (!draggedTodo) {
+                        handleCardClick(todo);
+                    }
+                }}
             >
                 <div className="flex items-start">
                     <div className={`${priorityColor} w-1 h-full rounded-full mr-2`}></div>
@@ -186,25 +262,23 @@ const TrelloBoard = ({
                                     )}
                                 </button>
                                 <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onRemove(todo.id);
-                                    }}
-                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                    onClick={(e) => handleDeleteTodo(todo.id, e)}
+                                    className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                    disabled={isDeleting}
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                 </button>
                             </div>
                         </div>
 
-                        {todo.dueDate && (
+                        {todo.date && (
                             <div className="flex items-center text-xs text-gray-400 mb-1">
                                 <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                {new Date(todo.dueDate).toLocaleDateString(language === 'tr' ? 'tr-TR' : 'en-US')}
+                                {todo.date}
                             </div>
                         )}
 
@@ -328,6 +402,19 @@ const TrelloBoard = ({
                 {renderColumn('inProgress')}
                 {renderColumn('done')}
             </div>
+
+            {/* Render task detail modal when a todo is selected */}
+            {selectedTodo && (
+                <TaskDetailModal
+                    todo={selectedTodo}
+                    onClose={handleCloseModal}
+                    onUpdate={handleUpdateTodo}
+                    onDelete={handleDeleteTodo}
+                    language={language}
+                    translations={translations}
+                    darkMode={true}
+                />
+            )}
         </>
     );
 };
