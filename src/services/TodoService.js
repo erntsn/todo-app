@@ -29,7 +29,7 @@ class TodoService {
             return todos;
         } catch (error) {
             console.error("Error fetching todos:", error);
-            throw new Error("Görevler yüklenirken hata oluştu.");
+            throw new Error("Görevler yüklenirken hata oluştu: " + error.message);
         }
     }
 
@@ -40,6 +40,11 @@ class TodoService {
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
+            }
+
+            // Ensure we have a valid todo object
+            if (!newTodo || !newTodo.text) {
+                throw new Error("Geçersiz görev verisi");
             }
 
             // Prepare the todo object
@@ -57,7 +62,7 @@ class TodoService {
             return this.getTodos();
         } catch (error) {
             console.error("Error adding todo:", error);
-            throw new Error("Görev eklenirken hata oluştu.");
+            throw new Error("Görev eklenirken hata oluştu: " + error.message);
         }
     }
 
@@ -68,6 +73,10 @@ class TodoService {
         try {
             if (!auth.currentUser) {
                 throw new Error("Kullanıcı giriş yapmamış");
+            }
+
+            if (!id) {
+                throw new Error("Geçersiz görev ID'si");
             }
 
             // Get current todo
@@ -99,7 +108,7 @@ class TodoService {
             return this.getTodos();
         } catch (error) {
             console.error("Error toggling todo completion:", error);
-            throw new Error("Görev durumu değiştirilirken hata oluştu.");
+            throw new Error("Görev durumu değiştirilirken hata oluştu: " + error.message);
         }
     }
 
@@ -112,25 +121,39 @@ class TodoService {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            // Prepare status data
-            const statusData = {};
-
-            if (status === 'completed' || status === 'done') {
-                statusData.status = status;
-                statusData.completed = true;
-                statusData.completedAt = new Date().toISOString();
-            } else {
-                statusData.status = status;
-                statusData.completed = false;
-                statusData.completedAt = null;
+            if (!id) {
+                throw new Error("Geçersiz görev ID'si");
             }
 
-            // Update the todo directly
+            if (!status) {
+                throw new Error("Geçersiz durum değeri");
+            }
+
+            // Get current todo to verify ownership
             const todoRef = doc(db, "todos", id);
-            await updateDoc(todoRef, {
-                ...statusData,
+            const todoSnap = await getDoc(todoRef);
+
+            if (!todoSnap.exists()) {
+                throw new Error("Todo bulunamadı");
+            }
+
+            const todoData = todoSnap.data();
+
+            // Only update if this todo belongs to the current user
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Bu görev size ait değil");
+            }
+
+            // Prepare status data
+            const statusData = {
+                status,
+                completed: status === 'completed' || status === 'done',
+                completedAt: (status === 'completed' || status === 'done') ? new Date().toISOString() : null,
                 updatedAt: new Date().toISOString()
-            });
+            };
+
+            // Update the todo directly
+            await updateDoc(todoRef, statusData);
 
             console.log(`Todo ${id} status updated to ${status}`);
 
@@ -138,7 +161,7 @@ class TodoService {
             return this.getTodos();
         } catch (error) {
             console.error("Error updating todo status:", error);
-            throw new Error("Görev durumu güncellenirken hata oluştu.");
+            throw new Error("Görev durumu güncellenirken hata oluştu: " + error.message);
         }
     }
 
@@ -151,15 +174,34 @@ class TodoService {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
-            // Delete directly without additional checks to simplify
-            await deleteDoc(doc(db, "todos", id));
+            if (!id) {
+                throw new Error("Geçersiz görev ID'si");
+            }
+
+            // Get current todo to verify ownership
+            const todoRef = doc(db, "todos", id);
+            const todoSnap = await getDoc(todoRef);
+
+            if (!todoSnap.exists()) {
+                throw new Error("Todo bulunamadı");
+            }
+
+            const todoData = todoSnap.data();
+
+            // Only delete if this todo belongs to the current user
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Bu görev size ait değil");
+            }
+
+            // Delete the todo
+            await deleteDoc(todoRef);
             console.log(`Todo ${id} deleted successfully`);
 
             // Return updated list
             return this.getTodos();
         } catch (error) {
             console.error("Error removing todo:", error.message, error.stack);
-            throw new Error("Görev silinirken hata oluştu.");
+            throw new Error("Görev silinirken hata oluştu: " + error.message);
         }
     }
 
@@ -172,11 +214,30 @@ class TodoService {
                 throw new Error("Kullanıcı giriş yapmamış");
             }
 
+            if (!id) {
+                throw new Error("Geçersiz görev ID'si");
+            }
+
+            // Get current todo to verify ownership
+            const todoRef = doc(db, "todos", id);
+            const todoSnap = await getDoc(todoRef);
+
+            if (!todoSnap.exists()) {
+                throw new Error("Todo bulunamadı");
+            }
+
+            const todoData = todoSnap.data();
+
+            // Only update if this todo belongs to the current user
+            if (todoData.userId !== auth.currentUser.uid) {
+                throw new Error("Bu görev size ait değil");
+            }
+
             // Remove id from data to update if it exists
             const { id: _, ...dataToUpdate } = updatedTodo;
 
             // Update directly
-            await updateDoc(doc(db, "todos", id), {
+            await updateDoc(todoRef, {
                 ...dataToUpdate,
                 updatedAt: new Date().toISOString()
             });
@@ -187,7 +248,7 @@ class TodoService {
             return this.getTodos();
         } catch (error) {
             console.error("Error updating todo:", error.message, error.stack);
-            throw new Error("Görev güncellenirken hata oluştu.");
+            throw new Error("Görev güncellenirken hata oluştu: " + error.message);
         }
     }
 }

@@ -27,6 +27,7 @@ const TrelloBoard = ({
     // Add state for selected todo (for detail modal)
     const [selectedTodo, setSelectedTodo] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     // Translate column titles
     const columnTitles = {
@@ -75,12 +76,16 @@ const TrelloBoard = ({
     // Handle updating a todo from the modal
     const handleUpdateTodo = async (updatedTodo) => {
         console.log("TrelloBoard updating todo:", updatedTodo);
+        setIsUpdating(true);
+
         try {
             await onUpdate(updatedTodo);
             handleCloseModal();
         } catch (error) {
             console.error("Error in handleUpdateTodo:", error);
-            alert(language === 'tr' ? 'Güncelleme işlemi başarısız oldu.' : 'Update operation failed.');
+            alert(language === 'tr' ? 'Güncelleme işlemi başarısız oldu: ' + error.message : 'Update operation failed: ' + error.message);
+        } finally {
+            setIsUpdating(false);
         }
     };
 
@@ -88,6 +93,12 @@ const TrelloBoard = ({
     const handleDeleteTodo = async (id, e) => {
         if (e) {
             e.stopPropagation(); // Prevent other click handlers
+            e.preventDefault(); // Prevent any default actions
+        }
+
+        if (!id) {
+            console.error("Invalid ID passed to handleDeleteTodo");
+            return;
         }
 
         console.log("TrelloBoard deleting todo with ID:", id);
@@ -106,7 +117,7 @@ const TrelloBoard = ({
                 }
             } catch (error) {
                 console.error("Error deleting todo:", error);
-                alert(language === 'tr' ? 'Silme işlemi başarısız oldu.' : 'Delete operation failed.');
+                alert(language === 'tr' ? 'Silme işlemi başarısız oldu: ' + error.message : 'Delete operation failed: ' + error.message);
             } finally {
                 setIsDeleting(false);
             }
@@ -120,13 +131,17 @@ const TrelloBoard = ({
 
         // Add dragging class after a short delay to allow the browser to capture the initial state
         setTimeout(() => {
-            e.target.classList.add('dragging');
+            if (e.target && !e.target.classList.contains('dragging')) {
+                e.target.classList.add('dragging');
+            }
         }, 0);
     };
 
     // Drag end handler
     const handleDragEnd = (e) => {
-        e.target.classList.remove('dragging');
+        if (e.target && e.target.classList.contains('dragging')) {
+            e.target.classList.remove('dragging');
+        }
         setDragOverColumn(null);
 
         // Clear dragged todo after a short delay to allow click events
@@ -138,22 +153,31 @@ const TrelloBoard = ({
     // Drag over handler
     const handleDragOver = (e, columnName) => {
         e.preventDefault();
-        e.currentTarget.classList.add('drag-over');
+        if (e.currentTarget && !e.currentTarget.classList.contains('drag-over')) {
+            e.currentTarget.classList.add('drag-over');
+        }
         setDragOverColumn(columnName);
     };
 
     // Drag leave handler
     const handleDragLeave = (e) => {
-        e.currentTarget.classList.remove('drag-over');
+        if (e.currentTarget && e.currentTarget.classList.contains('drag-over')) {
+            e.currentTarget.classList.remove('drag-over');
+        }
     };
 
     // Drop handler
-    const handleDrop = (e, columnName) => {
+    const handleDrop = async (e, columnName) => {
         e.preventDefault();
-        e.currentTarget.classList.remove('drag-over');
+        if (e.currentTarget && e.currentTarget.classList.contains('drag-over')) {
+            e.currentTarget.classList.remove('drag-over');
+        }
         setDragOverColumn(null);
 
-        if (!draggedTodo) return;
+        if (!draggedTodo || !draggedTodo.id) {
+            console.log("No dragged todo or missing ID");
+            return;
+        }
 
         // Don't do anything if dropped in the same column
         const currentStatus = draggedTodo.status || (draggedTodo.completed ? 'done' : 'todo');
@@ -162,41 +186,45 @@ const TrelloBoard = ({
             return;
         }
 
-        // Update the todo status
-        if (onUpdateStatus) {
-            try {
-                onUpdateStatus(draggedTodo.id, columnName);
-
-                // Also update completed status if appropriate
-                if (columnName === 'done' && !draggedTodo.completed) {
-                    onToggle(draggedTodo.id);
-                } else if (columnName !== 'done' && draggedTodo.completed) {
-                    onToggle(draggedTodo.id);
-                }
-            } catch (error) {
-                console.error("Error updating status:", error);
-            }
-        }
-
-        // Optimistically update local state
+        // Optimistically update local state first
         const updatedColumns = { ...localColumns };
 
         // Remove from old column
-        const sourceColumn = draggedTodo.status || (draggedTodo.completed ? 'done' : 'todo');
-        updatedColumns[sourceColumn] = updatedColumns[sourceColumn].filter(t => t.id !== draggedTodo.id);
+        updatedColumns[currentStatus] = updatedColumns[currentStatus].filter(t => t.id !== draggedTodo.id);
 
-        // Add to new column
-        const updatedTodo = { ...draggedTodo, status: columnName };
-        if (columnName === 'done') {
-            updatedTodo.completed = true;
-        } else {
-            updatedTodo.completed = false;
-        }
+        // Add to new column with updated properties
+        const updatedTodo = {
+            ...draggedTodo,
+            status: columnName,
+            completed: columnName === 'done',
+            completedAt: columnName === 'done' ? new Date().toISOString() : null
+        };
 
         updatedColumns[columnName].push(updatedTodo);
         setLocalColumns(updatedColumns);
 
-        setDraggedTodo(null);
+        // Then update in the database
+        if (onUpdateStatus) {
+            try {
+                setIsUpdating(true);
+                await onUpdateStatus(draggedTodo.id, columnName);
+
+                // Handle completed status if appropriate
+                if (columnName === 'done' && !draggedTodo.completed) {
+                    await onToggle(draggedTodo.id);
+                } else if (columnName !== 'done' && draggedTodo.completed) {
+                    await onToggle(draggedTodo.id);
+                }
+            } catch (error) {
+                console.error("Error updating status:", error);
+                // Revert the optimistic update if there was an error
+                alert(language === 'tr' ? 'Görev durumu güncellenirken bir hata oluştu: ' + error.message : 'Error updating task status: ' + error.message);
+                // We'll let the useEffect refresh from the database
+            } finally {
+                setIsUpdating(false);
+                setDraggedTodo(null);
+            }
+        }
     };
 
     // Render a single card
@@ -247,9 +275,11 @@ const TrelloBoard = ({
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
+                                        e.preventDefault();
                                         onToggle(todo.id);
                                     }}
                                     className="text-gray-400 hover:text-white transition-colors"
+                                    disabled={isUpdating}
                                 >
                                     {todo.completed ? (
                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

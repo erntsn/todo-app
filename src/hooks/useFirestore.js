@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { getFirestore, collection, query, where, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, query, where, onSnapshot, doc, addDoc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
 import { auth } from "../firebaseConfig";
 
 export default function useFirestore(collectionName) {

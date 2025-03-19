@@ -19,6 +19,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
     const [recurrenceValue, setRecurrenceValue] = useState(todo.recurring?.value || 1);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -34,15 +35,24 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
     };
 
     const handleSave = async () => {
+        // Clear any previous error
+        setErrorMessage('');
+
         try {
             setIsSaving(true);
+
+            // Validate the todo has the required fields
+            if (!editedTodo.text || editedTodo.text.trim() === '') {
+                throw new Error(language === 'tr' ? 'Görev metni boş olamaz' : 'Task text cannot be empty');
+            }
+
             // Update recurring settings
             const updatedTodo = {
                 ...editedTodo,
                 id: todo.id, // Ensure ID is included
                 recurring: isRecurring ? {
                     type: recurrenceType,
-                    value: parseInt(recurrenceValue, 10),
+                    value: parseInt(recurrenceValue, 10) || 1,
                     nextDate: editedTodo.date,
                 } : null
             };
@@ -52,13 +62,18 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
             onClose();
         } catch (error) {
             console.error("Error saving todo:", error);
-            alert(language === 'tr' ? 'Kaydetme hatası oluştu' : 'Error saving changes');
+            setErrorMessage(language === 'tr'
+                ? 'Kaydetme hatası oluştu: ' + error.message
+                : 'Error saving changes: ' + error.message);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDelete = async () => {
+        // Clear any previous error
+        setErrorMessage('');
+
         const confirmMessage = language === 'tr'
             ? 'Bu görevi silmek istediğinize emin misiniz?'
             : 'Are you sure you want to delete this task?';
@@ -66,12 +81,19 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
         if (window.confirm(confirmMessage)) {
             try {
                 setIsDeleting(true);
+
+                if (!todo.id) {
+                    throw new Error(language === 'tr' ? 'Geçersiz görev ID' : 'Invalid task ID');
+                }
+
                 console.log("Deleting todo with ID:", todo.id);
                 await onDelete(todo.id);
                 onClose();
             } catch (error) {
                 console.error("Error deleting todo:", error);
-                alert(language === 'tr' ? 'Silme hatası oluştu' : 'Error deleting task');
+                setErrorMessage(language === 'tr'
+                    ? 'Silme hatası oluştu: ' + error.message
+                    : 'Error deleting task: ' + error.message);
             } finally {
                 setIsDeleting(false);
             }
@@ -151,12 +173,24 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                     {/* Close button */}
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white hover:bg-gray-800"
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 text-white"
                         aria-label="Close"
                     >
-                        <span className="text-xl font-bold">X</span>
+                        <span className="text-xl font-bold">×</span>
                     </button>
                 </div>
+
+                {/* Error message display if present */}
+                {errorMessage && (
+                    <div className="mx-6 mt-4 p-3 bg-red-800 text-white rounded-md">
+                        <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {errorMessage}
+                        </div>
+                    </div>
+                )}
 
                 {/* Main content */}
                 <div className="p-6">
@@ -265,7 +299,7 @@ const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translat
                                         type="number"
                                         min="1"
                                         value={recurrenceValue}
-                                        onChange={(e) => setRecurrenceValue(parseInt(e.target.value || 1))}
+                                        onChange={(e) => setRecurrenceValue(parseInt(e.target.value) || 1)}
                                         className="w-16 px-3 py-2 rounded-r bg-gray-700 text-white"
                                     />
                                 </div>

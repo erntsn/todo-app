@@ -11,8 +11,6 @@ import PomodoroTimer from "./components/PomodoroTimer";
 import StatisticsDashboard from "./components/StatisticsDashboard";
 import Settings from "./components/Settings";
 import TodoService from "./services/TodoService";
-import { doc, deleteDoc, updateDoc } from "firebase/firestore";
-import { db } from "./firebaseConfig";
 
 // Translations object
 const translations = {
@@ -196,53 +194,7 @@ const App = () => {
         loadTodos();
     }, [user, loading]);
 
-
-    const directDeleteTodo = async (id) => {
-        try {
-            console.log("Using direct delete for todo ID:", id);
-            await deleteDoc(doc(db, "todos", id));
-            console.log("Todo deleted directly:", id);
-
-            // Refresh todos after deletion
-            const updatedTodos = await TodoService.getTodos();
-            setTodos(updatedTodos);
-            return true;
-        } catch (error) {
-            console.error("Direct delete error:", error);
-            alert(language === 'tr' ? 'Direkt silme işlemi başarısız: ' + error.message : 'Direct delete failed: ' + error.message);
-            return false;
-        }
-    };
-
-// Direct update function (bypasses TodoService)
-    const directUpdateTodo = async (id, data) => {
-        try {
-            console.log("Using direct update for todo ID:", id, data);
-
-            // Remove id from data if present
-            const { id: _, ...updateData } = data;
-
-            await updateDoc(doc(db, "todos", id), {
-                ...updateData,
-                updatedAt: new Date().toISOString()
-            });
-            console.log("Todo updated directly:", id);
-
-            // Refresh todos after update
-            const updatedTodos = await TodoService.getTodos();
-            setTodos(updatedTodos);
-            return true;
-        } catch (error) {
-            console.error("Direct update error:", error);
-            alert(language === 'tr' ? 'Direkt güncelleme işlemi başarısız: ' + error.message : 'Direct update failed: ' + error.message);
-            return false;
-        }
-    };
-
-
-// These are the critical handler functions from App.jsx that need to be fixed
-
-// Function handlers
+    // Function handlers
     const handleAddTodo = async (newTodo) => {
         try {
             console.log("Adding new todo");
@@ -255,6 +207,11 @@ const App = () => {
     };
 
     const handleToggleTodo = async (id) => {
+        if (!id) {
+            console.error("Invalid ID provided to handleToggleTodo");
+            return;
+        }
+
         try {
             console.log("Toggling todo completion:", id);
             const updatedTodos = await TodoService.toggleTodoCompletion(id);
@@ -266,6 +223,11 @@ const App = () => {
     };
 
     const handleUpdateTodoStatus = async (id, status) => {
+        if (!id) {
+            console.error("Invalid ID provided to handleUpdateTodoStatus");
+            return;
+        }
+
         try {
             console.log(`Todo durumu güncelleniyor: ${id}, hedef durum: ${status}`);
             const updatedTodos = await TodoService.updateTodoStatus(id, status);
