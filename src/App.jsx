@@ -39,6 +39,7 @@ const translations = {
         search: "Ara...",
         recurring: "Tekrarlayan Görev",
         every: "Her",
+        cancel: "İptal",
         recurrence: {
             daily: "Günlük",
             weekly: "Haftalık",
@@ -48,6 +49,7 @@ const translations = {
         allCategories: "Tüm Kategoriler",
         filteringByTag: "Etiket Filtresi",
         categories: {
+            label: "Kategoriler",
             work: 'İş',
             personal: 'Kişisel',
             health: 'Sağlık',
@@ -59,7 +61,9 @@ const translations = {
         loading: "Yükleniyor...",
         error: "Hata",
         tryAgain: "Tekrar Dene",
-        authError: "Kimlik doğrulama hatası"
+        authError: "Kimlik doğrulama hatası",
+        date: "Tarih",
+        category: "Kategori"
     },
     en: {
         title: "Todo App ⚡️",
@@ -86,6 +90,7 @@ const translations = {
         search: "Search...",
         recurring: "Recurring Task",
         every: "Every",
+        cancel: "Cancel",
         recurrence: {
             daily: "Daily",
             weekly: "Weekly",
@@ -95,6 +100,7 @@ const translations = {
         allCategories: "All Categories",
         filteringByTag: "Filtering by tag",
         categories: {
+            label: "Categories",
             work: 'Work',
             personal: 'Personal',
             health: 'Health',
@@ -106,7 +112,9 @@ const translations = {
         loading: "Loading...",
         error: "Error",
         tryAgain: "Try Again",
-        authError: "Authentication error"
+        authError: "Authentication error",
+        date: "Date",
+        category: "Category"
     }
 };
 
@@ -361,229 +369,458 @@ const App = () => {
 
     // Main content
     return (
-        <div className="h-screen w-screen flex items-stretch overflow-hidden bg-gray-900">
+        <div className="h-screen w-screen flex flex-col md:flex-row bg-gradient-to-br from-gray-900 to-gray-950 text-white">
             {user ? (
-                <div className="flex flex-col w-full h-full bg-gray-800 text-white">
-                    {/* Fixed Header */}
-                    <div className="sticky top-0 z-10 p-4 shadow-md bg-gray-800">
-                        <h1 className="text-3xl font-bold text-center mb-4 text-white">
-                            {translations[language].title}
-                        </h1>
-
-                        {/* Search bar */}
-                        <div className="mb-4">
-                            <input
-                                type="text"
-                                placeholder={translations[language].search}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full p-2 rounded border bg-gray-700 border-gray-600 text-white"
-                            />
+                <>
+                    {/* Yan menü - Tablet ve üstü cihazlarda görünür */}
+                    <div className="hidden md:flex w-64 flex-shrink-0 bg-gray-800 flex-col p-4 border-r border-gray-700">
+                        <div className="flex items-center justify-center mb-8">
+                            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                                {translations[language].title}
+                            </h1>
                         </div>
 
-                        {/* Only show the todo form if not in pomodoro or statistics view */}
-                        {!showPomodoro && !showStatistics && (
-                            <TodoForm
-                                onAdd={handleAddTodo}
-                                language={language}
-                                translations={translations}
-                                darkMode={darkMode}
-                            />
-                        )}
+                        {/* Kullanıcı bilgileri */}
+                        <div className="flex items-center space-x-3 p-3 mb-6 bg-gray-700 rounded-lg">
+                            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                                {user.email?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                                <p className="text-xs text-gray-400">{user.displayName || 'Kullanıcı'}</p>
+                            </div>
+                        </div>
 
-                        {/* Category filters */}
-                        {!showPomodoro && !showStatistics && (
-                            <div className="flex flex-wrap gap-1 my-2">
+                        {/* Ana navigasyon */}
+                        <nav className="space-y-1 mb-6">
+                            <button
+                                onClick={() => setView("list")}
+                                className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                    viewMode === "list" && !showPomodoro && !showStatistics ?
+                                        "bg-blue-600 text-white" :
+                                        "text-gray-300 hover:bg-gray-700"
+                                } transition-colors`}
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                {translations[language].listView}
+                            </button>
+
+                            <button
+                                onClick={() => setView("board")}
+                                className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                    viewMode === "board" && !showPomodoro && !showStatistics ?
+                                        "bg-blue-600 text-white" :
+                                        "text-gray-300 hover:bg-gray-700"
+                                } transition-colors`}
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                </svg>
+                                {translations[language].boardView}
+                            </button>
+
+                            <button
+                                onClick={() => setView("calendar")}
+                                className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                    viewMode === "calendar" && !showPomodoro && !showStatistics ?
+                                        "bg-blue-600 text-white" :
+                                        "text-gray-300 hover:bg-gray-700"
+                                } transition-colors`}
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                {translations[language].calendarView}
+                            </button>
+
+                            <button
+                                onClick={toggleStatistics}
+                                className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                    showStatistics ?
+                                        "bg-blue-600 text-white" :
+                                        "text-gray-300 hover:bg-gray-700"
+                                } transition-colors`}
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                {translations[language].statistics}
+                            </button>
+
+                            <button
+                                onClick={togglePomodoro}
+                                className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                    showPomodoro ?
+                                        "bg-blue-600 text-white" :
+                                        "text-gray-300 hover:bg-gray-700"
+                                } transition-colors`}
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {translations[language].pomodoro}
+                            </button>
+                        </nav>
+
+                        {/* Kategori filtreleri */}
+                        <div className="mb-6">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                {translations[language].categories.label || 'Categories'}
+                            </h3>
+
+                            <div className="space-y-1">
                                 <button
                                     onClick={() => setCategoryFilter('all')}
-                                    className={`px-2 py-1 rounded-lg text-xs ${
-                                        categoryFilter === 'all'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-gray-700 text-gray-300'
-                                    }`}
+                                    className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                        categoryFilter === 'all' ?
+                                            "bg-blue-600 text-white" :
+                                            "text-gray-300 hover:bg-gray-700"
+                                    } transition-colors`}
                                 >
                                     {translations[language].allCategories}
                                 </button>
 
-                                {Object.keys(translations[language].categories).map(cat => (
+                                {Object.keys(translations[language].categories)
+                                    .filter(cat => cat !== 'label')
+                                    .map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setCategoryFilter(cat)}
+                                            className={`w-full flex items-center px-3 py-2 rounded-lg text-sm ${
+                                                categoryFilter === cat ?
+                                                    `bg-${categoryColors[cat]}-700 text-white` :
+                                                    "text-gray-300 hover:bg-gray-700"
+                                            } transition-colors`}
+                                        >
+                                            <span className={`w-2 h-2 rounded-full bg-${categoryColors[cat]}-500 mr-2`}></span>
+                                            {translations[language].categories[cat]}
+                                        </button>
+                                    ))}
+                            </div>
+                        </div>
+
+                        {/* Ayarlar ve Çıkış */}
+                        <div className="mt-auto pt-6 border-t border-gray-700">
+                            <button
+                                onClick={toggleSettings}
+                                className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors mb-2"
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {translations[language].settings}
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-900 hover:bg-opacity-30 transition-colors"
+                            >
+                                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                {translations[language].logout}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobil alt navigasyon menüsü */}
+                    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 z-10">
+                        <div className="flex items-center justify-around">
+                            <button
+                                onClick={() => setView("list")}
+                                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                                    viewMode === "list" && !showPomodoro && !showStatistics ?
+                                        "text-blue-500" : "text-gray-400"
+                                }`}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                <span className="text-xs mt-1">
+                                    {translations[language].listView.split(' ')[0]}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => setView("board")}
+                                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                                    viewMode === "board" && !showPomodoro && !showStatistics ?
+                                        "text-blue-500" : "text-gray-400"
+                                }`}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                </svg>
+                                <span className="text-xs mt-1">
+                                    {translations[language].boardView.split(' ')[0]}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => setView("calendar")}
+                                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                                    viewMode === "calendar" && !showPomodoro && !showStatistics ?
+                                        "text-blue-500" : "text-gray-400"
+                                }`}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-xs mt-1">
+                                    {translations[language].calendarView.split(' ')[0]}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={toggleStatistics}
+                                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                                    showStatistics ? "text-blue-500" : "text-gray-400"
+                                }`}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                <span className="text-xs mt-1">
+                                    {translations[language].statistics.split(' ')[0]}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={togglePomodoro}
+                                className={`flex flex-col items-center justify-center py-2 px-4 ${
+                                    showPomodoro ? "text-blue-500" : "text-gray-400"
+                                }`}
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-xs mt-1">
+                                    {translations[language].pomodoro.split(' ')[0]}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Ana içerik alanı */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Üst başlık alanı - Mobilde görünür, masaüstünde gizli */}
+                        <div className="md:hidden flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+                            <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                                {translations[language].title}
+                            </h1>
+
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={toggleSettings}
+                                    className="p-2 text-gray-400 hover:text-white"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Arama ve filtreleme alanı */}
+                        <div className="p-4 bg-gray-800 border-b border-gray-700">
+                            {/* Arama kutusu */}
+                            <div className="relative mb-4">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder={translations[language].search}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                />
+                                {searchQuery && (
                                     <button
-                                        key={cat}
-                                        onClick={() => setCategoryFilter(cat)}
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Todo form - sadece liste viewde ve pomodoro/statistics inactive ise görünür */}
+                            {!showPomodoro && !showStatistics && (
+                                <TodoForm
+                                    onAdd={handleAddTodo}
+                                    language={language}
+                                    translations={translations}
+                                    darkMode={darkMode}
+                                />
+                            )}
+
+                            {/* Kategori filtreleri - mobil görünüm */}
+                            {!showPomodoro && !showStatistics && (
+                                <div className="md:hidden flex flex-wrap gap-1 mt-4">
+                                    <button
+                                        onClick={() => setCategoryFilter('all')}
                                         className={`px-2 py-1 rounded-lg text-xs ${
-                                            categoryFilter === cat
-                                                ? `bg-${categoryColors[cat]}-500 text-white`
-                                                : `bg-gray-700 text-gray-300`
+                                            categoryFilter === 'all'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-700 text-gray-300'
                                         }`}
                                     >
-                                        {translations[language].categories[cat]}
+                                        {translations[language].allCategories}
                                     </button>
-                                ))}
-                            </div>
-                        )}
 
-                        {/* Tag filter indicator */}
-                        {tagFilter && !showPomodoro && !showStatistics && (
-                            <div className="flex items-center gap-2 my-2">
-                                <span className="text-sm">{translations[language].filteringByTag}:</span>
-                                <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-700 text-white">
-                                    <span>#{tagFilter}</span>
-                                    <button
-                                        onClick={() => setTagFilter(null)}
-                                        className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-500 hover:text-white"
-                                    >
-                                        ×
-                                    </button>
+                                    {Object.keys(translations[language].categories)
+                                        .filter(cat => cat !== 'label')
+                                        .map(cat => (
+                                            <button
+                                                key={cat}
+                                                onClick={() => setCategoryFilter(cat)}
+                                                className={`px-2 py-1 rounded-lg text-xs ${
+                                                    categoryFilter === cat
+                                                        ? `bg-${categoryColors[cat]}-500 text-white`
+                                                        : `bg-gray-700 text-gray-300`
+                                                }`}
+                                            >
+                                                {translations[language].categories[cat]}
+                                            </button>
+                                        ))}
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        <div className="flex justify-between items-center my-4">
-                            {/* Status filter buttons - only show in list view and not in pomodoro/statistics */}
-                            {viewMode === "list" && !showPomodoro && !showStatistics ? (
+                            {/* Etiket filtreleme gösterici */}
+                            {tagFilter && !showPomodoro && !showStatistics && (
+                                <div className="flex items-center gap-2 mt-3">
+                                    <span className="text-sm text-gray-400">{translations[language].filteringByTag}:</span>
+                                    <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-700 text-white">
+                                        <span>#{tagFilter}</span>
+                                        <button
+                                            onClick={() => setTagFilter(null)}
+                                            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-500 hover:text-white"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Durum filtreleri - sadece liste viewde ve pomodoro/statistics inactive ise görünür */}
+                        {viewMode === "list" && !showPomodoro && !showStatistics && (
+                            <div className="p-4 border-b border-gray-700 bg-gray-750">
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setFilter("all")}
-                                        className={`px-4 py-1 rounded ${filter === "all" ? "bg-blue-600" : "bg-gray-700"} text-white`}
+                                        className={`px-4 py-1 rounded ${filter === "all" ? "bg-blue-600" : "bg-gray-700"} text-white transition-colors`}
                                     >
                                         {translations[language].all}
                                     </button>
                                     <button
                                         onClick={() => setFilter("active")}
-                                        className={`px-4 py-1 rounded ${filter === "active" ? "bg-blue-600" : "bg-gray-700"} text-white`}
+                                        className={`px-4 py-1 rounded ${filter === "active" ? "bg-blue-600" : "bg-gray-700"} text-white transition-colors`}
                                     >
                                         {translations[language].active}
                                     </button>
                                     <button
                                         onClick={() => setFilter("completed")}
-                                        className={`px-4 py-1 rounded ${filter === "completed" ? "bg-blue-600" : "bg-gray-700"} text-white`}
+                                        className={`px-4 py-1 rounded ${filter === "completed" ? "bg-blue-600" : "bg-gray-700"} text-white transition-colors`}
                                     >
                                         {translations[language].completed}
                                     </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Ana içerik kaydırılabilir alan */}
+                        <div className="flex-1 overflow-y-auto p-4 pb-20 md:pb-4">
+                            {showPomodoro ? (
+                                <PomodoroTimer
+                                    language={language}
+                                    darkMode={darkMode}
+                                />
+                            ) : showStatistics ? (
+                                <StatisticsDashboard
+                                    todos={todos}
+                                    language={language}
+                                />
+                            ) : viewMode === "list" ? (
+                                <TodoList
+                                    todos={getFilteredTodos()}
+                                    onToggle={handleToggleTodo}
+                                    onRemove={handleRemoveTodo}
+                                    onUpdate={handleUpdateTodo}
+                                    onTagClick={handleTagClick}
+                                    language={language}
+                                    translations={translations}
+                                    darkMode={darkMode}
+                                />
+                            ) : viewMode === "board" ? (
+                                <TrelloBoard
+                                    todos={todos}
+                                    onToggle={handleToggleTodo}
+                                    onRemove={handleRemoveTodo}
+                                    onUpdate={handleUpdateTodo}
+                                    onUpdateStatus={handleUpdateTodoStatus}
+                                    onTagClick={handleTagClick}
+                                    language={language}
+                                    translations={translations}
+                                    darkMode={darkMode}
+                                />
                             ) : (
-                                <div></div> // Empty div for spacing
+                                <CalendarView
+                                    todos={todos}
+                                    onToggle={handleToggleTodo}
+                                    onRemove={handleRemoveTodo}
+                                    onUpdate={handleUpdateTodo}
+                                    language={language}
+                                    translations={translations}
+                                    darkMode={darkMode}
+                                />
                             )}
+                        </div>
+                    </div>
 
-                            {/* View mode buttons */}
-                            <div className="flex gap-2">
-                                {/* List View */}
-                                <button
-                                    onClick={() => setView("list")}
-                                    className={`px-3 py-1 rounded ${viewMode === "list" && !showPomodoro && !showStatistics ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
-                                >
-                                    {translations[language].listView}
-                                </button>
+                    {/* Ayarlar Panel (Koşullu olarak gösteriliyor) */}
+                    {settingsOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold">{translations[language].settings}</h2>
+                                    <button
+                                        onClick={toggleSettings}
+                                        className="text-gray-400 hover:text-white"
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
 
-                                {/* Board View */}
-                                <button
-                                    onClick={() => setView("board")}
-                                    className={`px-3 py-1 rounded ${viewMode === "board" && !showPomodoro && !showStatistics ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
-                                >
-                                    {translations[language].boardView}
-                                </button>
+                                <Settings
+                                    language={language}
+                                    setLanguage={setLanguage}
+                                    translations={translations}
+                                />
 
-                                {/* Calendar View */}
                                 <button
-                                    onClick={() => setView("calendar")}
-                                    className={`px-3 py-1 rounded ${viewMode === "calendar" && !showPomodoro && !showStatistics ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
+                                    onClick={handleLogout}
+                                    className="w-full mt-6 p-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                                 >
-                                    {translations[language].calendarView}
-                                </button>
-
-                                {/* Statistics Button */}
-                                <button
-                                    onClick={toggleStatistics}
-                                    className={`px-3 py-1 rounded ${showStatistics ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
-                                >
-                                    {translations[language].statistics}
-                                </button>
-
-                                {/* Pomodoro Button */}
-                                <button
-                                    onClick={togglePomodoro}
-                                    className={`px-3 py-1 rounded ${showPomodoro ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
-                                >
-                                    {translations[language].pomodoro}
-                                </button>
-
-                                {/* Settings Button */}
-                                <button
-                                    onClick={toggleSettings}
-                                    className={`px-3 py-1 rounded ${settingsOpen ? "bg-blue-600" : "bg-gray-700"} text-white transition`}
-                                >
-                                    {translations[language].settings}
+                                    {translations[language].logout}
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Scrollable Content Area */}
-                    <div className="flex-1 overflow-y-auto p-4">
-                        {showPomodoro ? (
-                            <PomodoroTimer
-                                language={language}
-                                darkMode={darkMode}
-                            />
-                        ) : showStatistics ? (
-                            <StatisticsDashboard
-                                todos={todos}
-                                language={language}
-                            />
-                        ) : viewMode === "list" ? (
-                            <TodoList
-                                todos={getFilteredTodos()}
-                                onToggle={handleToggleTodo}
-                                onRemove={handleRemoveTodo}
-                                onUpdate={handleUpdateTodo}
-                                onTagClick={handleTagClick}
-                                language={language}
-                                translations={translations}
-                                darkMode={darkMode}
-                            />
-                        ) : viewMode === "board" ? (
-                            <TrelloBoard
-                                todos={todos} // Send all todos for board view, it handles its own grouping
-                                onToggle={handleToggleTodo}
-                                onRemove={handleRemoveTodo}
-                                onUpdate={handleUpdateTodo}
-                                onUpdateStatus={handleUpdateTodoStatus}
-                                onTagClick={handleTagClick}
-                                language={language}
-                                translations={translations}
-                                darkMode={darkMode}
-                            />
-                        ) : (
-                            <CalendarView
-                                todos={todos} // Send all todos for calendar view
-                                onToggle={handleToggleTodo}
-                                onRemove={handleRemoveTodo}
-                                onUpdate={handleUpdateTodo}
-                                language={language}
-                                translations={translations}
-                                darkMode={darkMode}
-                            />
-                        )}
-                    </div>
-
-                    {/* Settings Panel (Conditionally Rendered) */}
-                    {settingsOpen && (
-                        <div className="p-4 border-t border-gray-700">
-                            <Settings
-                                language={language}
-                                setLanguage={setLanguage}
-                                translations={translations}
-                            />
-                            <button
-                                onClick={handleLogout}
-                                className="w-full mt-4 p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                            >
-                                {translations[language].logout}
-                            </button>
-                        </div>
                     )}
-                </div>
+                </>
             ) : (
-                <div className="w-full flex items-center justify-center bg-gray-900">
+                <div className="w-full flex items-center justify-center">
                     <AuthForm />
                 </div>
             )}
