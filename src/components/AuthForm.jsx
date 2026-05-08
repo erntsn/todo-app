@@ -9,8 +9,6 @@ const AuthForm = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    console.log("AuthForm render ediliyor");
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -18,10 +16,8 @@ const AuthForm = () => {
 
         try {
             if (isRegistering) {
-                console.log("Kayıt yapılıyor:", email);
                 await createUserWithEmailAndPassword(auth, email, password);
             } else {
-                console.log("Giriş yapılıyor:", email);
                 await signInWithEmailAndPassword(auth, email, password);
             }
         } catch (err) {
@@ -33,62 +29,50 @@ const AuthForm = () => {
     };
 
     return (
-        <div className="max-w-md w-full mx-auto p-6 bg-gray-800 rounded-lg shadow-lg text-white">
-            <h2 className="text-2xl font-bold text-center mb-4">
-                {isRegistering ? "Kayıt Ol" : "Giriş Yap"}
-            </h2>
+        <div className="auth-shell p-7 text-white">
+            <div className="mb-6 text-center">
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400 mb-2">Task Flow</p>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-sky-300 to-amber-200 text-transparent bg-clip-text">
+                    {isRegistering ? "Kayıt Ol" : "Giriş Yap"}
+                </h2>
+            </div>
 
             {error && (
-                <div className="mb-4 p-3 bg-red-900 text-red-200 rounded">
+                <div className="mb-4 p-3 bg-red-900/45 border border-red-300/30 text-red-100 rounded-xl text-sm">
                     {error}
                 </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium mb-1">E-posta</label>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-200">E-posta</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-2 border rounded bg-gray-700 text-white border-gray-600"
+                        className="input-elevated"
                         required
                     />
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">Şifre</label>
+                    <label className="block text-sm font-semibold mb-1.5 text-slate-200">Şifre</label>
                     <input
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-2 border rounded bg-gray-700 text-white border-gray-600"
+                        className="input-elevated"
                         required
                     />
                 </div>
 
-                <button
-                    type="submit"
-                    className="w-full p-2 bg-blue-600 text-white rounded"
-                    disabled={loading}
-                >
-                    {loading ? (
-                        "İşleniyor..."
-                    ) : isRegistering ? (
-                        "Kayıt Ol"
-                    ) : (
-                        "Giriş Yap"
-                    )}
+                <button type="submit" className="btn-primary w-full p-3" disabled={loading}>
+                    {loading ? "İşleniyor..." : isRegistering ? "Kayıt Ol" : "Giriş Yap"}
                 </button>
             </form>
 
-            <button
-                onClick={() => setIsRegistering(!isRegistering)}
-                className="w-full mt-4 p-2 bg-gray-700 rounded"
-            >
-                {isRegistering
-                    ? "Zaten hesabın var mı? Giriş yap"
-                    : "Hesabın yok mu? Kayıt ol"}
+            <button onClick={() => setIsRegistering(!isRegistering)} className="btn-ghost w-full mt-4 p-3">
+                {isRegistering ? "Zaten hesabın var mı? Giriş yap" : "Hesabın yok mu? Kayıt ol"}
             </button>
         </div>
     );

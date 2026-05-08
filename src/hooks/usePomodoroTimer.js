@@ -40,32 +40,6 @@ export default function usePomodoroTimer(initialSettings = {}) {
         localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
     }, [settings]);
 
-    // Handle timer
-    useEffect(() => {
-        if (isActive) {
-            timerRef.current = setInterval(() => {
-                if (seconds === 0) {
-                    if (minutes === 0) {
-                        clearInterval(timerRef.current);
-                        // Play sound
-                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-                        audio.play();
-                        handleTimerComplete();
-                    } else {
-                        setMinutes(minutes - 1);
-                        setSeconds(59);
-                    }
-                } else {
-                    setSeconds(seconds - 1);
-                }
-            }, 1000);
-        } else {
-            clearInterval(timerRef.current);
-        }
-
-        return () => clearInterval(timerRef.current);
-    }, [isActive, minutes, seconds]);
-
     // Handle timer completion
     const handleTimerComplete = useCallback(() => {
         setIsActive(false);
@@ -91,6 +65,32 @@ export default function usePomodoroTimer(initialSettings = {}) {
 
         setSeconds(0);
     }, [mode, cycles, settings]);
+
+    // Handle timer
+    useEffect(() => {
+        if (isActive) {
+            timerRef.current = setInterval(() => {
+                if (seconds === 0) {
+                    if (minutes === 0) {
+                        clearInterval(timerRef.current);
+                        // Play sound
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                        audio.play();
+                        handleTimerComplete();
+                    } else {
+                        setMinutes(minutes - 1);
+                        setSeconds(59);
+                    }
+                } else {
+                    setSeconds(seconds - 1);
+                }
+            }, 1000);
+        } else {
+            clearInterval(timerRef.current);
+        }
+
+        return () => clearInterval(timerRef.current);
+    }, [isActive, minutes, seconds, handleTimerComplete]);
 
     // Start or pause timer
     const toggleTimer = useCallback(() => {

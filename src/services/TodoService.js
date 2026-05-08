@@ -19,9 +19,11 @@ class TodoService {
 
             const todos = [];
             querySnapshot.forEach((doc) => {
+                const data = doc.data();
                 todos.push({
-                    id: doc.id,
-                    ...doc.data()
+                    ...data,
+                    // Always trust Firestore document id for mutations
+                    id: doc.id
                 });
             });
 
@@ -48,8 +50,9 @@ class TodoService {
             }
 
             // Prepare the todo object
+            const { id: _clientId, ...todoPayload } = newTodo;
             const todoData = {
-                ...newTodo,
+                ...todoPayload,
                 userId: auth.currentUser.uid,
                 createdAt: new Date().toISOString()
             };

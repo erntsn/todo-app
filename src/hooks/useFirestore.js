@@ -1,11 +1,13 @@
 ﻿import { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, onSnapshot, doc, addDoc, updateDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../firebaseConfig";
 
 export default function useFirestore(collectionName) {
     const [documents, setDocuments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [user] = useAuthState(auth);
 
     const db = getFirestore();
 
@@ -13,7 +15,6 @@ export default function useFirestore(collectionName) {
     useEffect(() => {
         setIsLoading(true);
 
-        const user = auth.currentUser;
         if (!user) {
             setDocuments([]);
             setIsLoading(false);
@@ -32,9 +33,11 @@ export default function useFirestore(collectionName) {
             (snapshot) => {
                 const results = [];
                 snapshot.forEach((doc) => {
+                    const data = doc.data();
                     results.push({
-                        id: doc.id,
-                        ...doc.data()
+                        ...data,
+                        // Keep Firestore doc id as canonical id
+                        id: doc.id
                     });
                 });
                 setDocuments(results);
@@ -50,17 +53,17 @@ export default function useFirestore(collectionName) {
 
         // Cleanup subscription on unmount
         return () => unsubscribe();
-    }, [collectionName, db, auth.currentUser]);
+    }, [collectionName, db, user]);
 
     // Add a document
     const addDocument = async (data) => {
         try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("User not authenticated");
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("User not authenticated");
 
             return await addDoc(collection(db, collectionName), {
                 ...data,
-                userId: user.uid,
+                userId: currentUser.uid,
                 createdAt: new Date().toISOString()
             });
         } catch (err) {
@@ -73,13 +76,13 @@ export default function useFirestore(collectionName) {
     // Update a document
     const updateDocument = async (id, data) => {
         try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("User not authenticated");
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("User not authenticated");
 
             // Verify document belongs to current user before updating
             const q = query(
                 collection(db, collectionName),
-                where("userId", "==", user.uid)
+                where("userId", "==", currentUser.uid)
             );
             const querySnapshot = await getDocs(q);
             const docs = [];
@@ -106,13 +109,13 @@ export default function useFirestore(collectionName) {
     // Delete a document
     const deleteDocument = async (id) => {
         try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("User not authenticated");
+            const currentUser = auth.currentUser;
+            if (!currentUser) throw new Error("User not authenticated");
 
             // Verify document belongs to current user before deleting
             const q = query(
                 collection(db, collectionName),
-                where("userId", "==", user.uid)
+                where("userId", "==", currentUser.uid)
             );
             const querySnapshot = await getDocs(q);
             const docs = [];
@@ -142,3 +145,4 @@ export default function useFirestore(collectionName) {
         deleteDocument
     };
 }
+

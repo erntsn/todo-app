@@ -16,8 +16,8 @@ class StatisticsService {
         const q = query(this.todosCollection, where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const todos = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+            ...doc.data(),
+            id: doc.id
         }));
 
         // Create a map of dates (last 30 days) to count of completed tasks
@@ -58,8 +58,8 @@ class StatisticsService {
         const q = query(this.todosCollection, where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const todos = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+            ...doc.data(),
+            id: doc.id
         }));
 
         const priorityCounts = {
@@ -91,8 +91,8 @@ class StatisticsService {
         const q = query(this.todosCollection, where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const todos = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+            ...doc.data(),
+            id: doc.id
         }));
 
         const today = new Date();
@@ -122,8 +122,8 @@ class StatisticsService {
         const q = query(this.todosCollection, where("userId", "==", user.uid));
         const querySnapshot = await getDocs(q);
         const todos = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+            ...doc.data(),
+            id: doc.id
         }));
 
         const categoryCounts = {};
