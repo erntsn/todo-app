@@ -1,384 +1,288 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import SubtaskList from "./SubtaskList";
-import TagsInput from "./TagsInput";
-import CategorySelector from "./CategorySelector";
-import { downloadTodoAsIcs, getGoogleCalendarUrl } from "../utils/calendarExport";
+import { getGoogleCalendarUrl, downloadTodoAsIcs } from "../utils/calendarExport";
 
-const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language, translations }) => {
-    const [editedTodo, setEditedTodo] = useState({
-        ...todo,
-        notes: todo.notes || "",
-        subtasks: todo.subtasks || [],
-        tags: todo.tags || [],
-        category: todo.category || "other",
-        recurring: todo.recurring || null
-    });
+const LABELS = {
+    tr: {
+        title: "Görev Detayı",
+        save: "Kaydet",
+        saving: "Kaydediliyor...",
+        cancel: "İptal",
+        delete: "Sil",
+        deleting: "Siliniyor...",
+        notes: "Notlar",
+        notesPlaceholder: "Notlar...",
+        date: "Tarih",
+        priority: { label: "Öncelik", high: "Yüksek", medium: "Orta", low: "Düşük" },
+        confirmDelete: "Bu görevi silmek istediğinize emin misiniz?",
+        completed: "Tamamlandı",
+        active: "Aktif",
+    },
+    en: {
+        title: "Task Detail",
+        save: "Save",
+        saving: "Saving...",
+        cancel: "Cancel",
+        delete: "Delete",
+        deleting: "Deleting...",
+        notes: "Notes",
+        notesPlaceholder: "Add notes...",
+        date: "Date",
+        priority: { label: "Priority", high: "High", medium: "Medium", low: "Low" },
+        confirmDelete: "Delete this task?",
+        completed: "Completed",
+        active: "Active",
+    },
+};
 
-    const [isRecurring, setIsRecurring] = useState(Boolean(todo.recurring));
-    const [recurrenceType, setRecurrenceType] = useState(todo.recurring?.type || "daily");
-    const [recurrenceValue, setRecurrenceValue] = useState(todo.recurring?.value || 1);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+const TaskDetailModal = ({ todo, onClose, onUpdate, onDelete, language }) => {
+    const t = LABELS[language] || LABELS.tr;
 
-    const localT = {
-        tr: {
-            title: "Görev Detayları",
-            delete: "Sil",
-            cancel: "İptal",
-            save: "Kaydet",
-            saving: "Kaydediliyor...",
-            deleting: "Siliniyor...",
-            notes: "Notlar",
-            date: "Tarih",
-            priority: {
-                label: "Öncelik",
-                high: "Yüksek",
-                medium: "Orta",
-                low: "Düşük"
-            },
-            notesPlaceholder: "Görevle ilgili notları yazın",
-            confirmDelete: "Bu görevi silmek istediğinize emin misiniz?",
-            recurring: "Tekrarlayan Görev",
-            every: "Her",
-            completed: "Tamamlandı",
-            active: "Aktif",
-            textRequired: "Görev metni boş olamaz",
-            invalidId: "Geçersiz görev kimliği",
-            saveError: "Kaydetme hatası",
-            deleteError: "Silme hatası",
-            calendarTitle: "Takvime Ekle",
-            addGoogle: "Google Takvim",
-            addPhoneCalendar: "Telefon/Apple/Outlook (.ics)",
-            calendarHint: "Tarih girildiğinde görevi takvime etkinlik olarak ekleyebilirsiniz.",
-            dateRequiredForCalendar: "Takvime eklemek için görev tarihi gerekli"
-        },
-        en: {
-            title: "Task Details",
-            delete: "Delete",
-            cancel: "Cancel",
-            save: "Save",
-            saving: "Saving...",
-            deleting: "Deleting...",
-            notes: "Notes",
-            date: "Date",
-            priority: {
-                label: "Priority",
-                high: "High",
-                medium: "Medium",
-                low: "Low"
-            },
-            notesPlaceholder: "Write notes about this task",
-            confirmDelete: "Are you sure you want to delete this task?",
-            recurring: "Recurring Task",
-            every: "Every",
-            completed: "Completed",
-            active: "Active",
-            textRequired: "Task text cannot be empty",
-            invalidId: "Invalid task ID",
-            saveError: "Error saving changes",
-            deleteError: "Error deleting task",
-            calendarTitle: "Add To Calendar",
-            addGoogle: "Google Calendar",
-            addPhoneCalendar: "Phone/Apple/Outlook (.ics)",
-            calendarHint: "Once a date is set, you can add this task as a calendar event.",
-            dateRequiredForCalendar: "Task date is required for calendar export"
-        }
-    };
-
-    const t = localT[language] || localT.tr;
-
-    const translationSet = translations?.[language] || {};
-    const priorityOptions = translationSet.priority || t.priority;
-    const recurrenceOptions = translationSet.recurrence || {
-        daily: "Daily",
-        weekly: "Weekly",
-        monthly: "Monthly",
-        yearly: "Yearly"
-    };
-
-    const statusLabel = editedTodo.completed ? t.completed : t.active;
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setEditedTodo((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubtasksUpdate = (subtasks) => {
-        setEditedTodo((prev) => ({ ...prev, subtasks }));
-    };
-
-    const handleTagsUpdate = (tags) => {
-        setEditedTodo((prev) => ({ ...prev, tags }));
-    };
-
-    const handleToggleComplete = () => {
-        setEditedTodo((prev) => ({
-            ...prev,
-            completed: !prev.completed,
-            completedAt: !prev.completed ? new Date().toISOString() : null
-        }));
-    };
-
-    const handleAddGoogleCalendar = () => {
-        setErrorMessage("");
-
-        const url = getGoogleCalendarUrl(editedTodo, language);
-        if (!url) {
-            setErrorMessage(t.dateRequiredForCalendar);
-            return;
-        }
-
-        window.open(url, "_blank", "noopener,noreferrer");
-    };
-
-    const handleDownloadIcs = () => {
-        setErrorMessage("");
-
-        const exported = downloadTodoAsIcs(editedTodo, language);
-        if (!exported) {
-            setErrorMessage(t.dateRequiredForCalendar);
-        }
-    };
+    const [text, setText] = useState(todo.text || "");
+    const [priority, setPriority] = useState(todo.priority || "medium");
+    const [date, setDate] = useState(todo.date || "");
+    const [notes, setNotes] = useState(todo.notes || "");
+    const [subtasks, setSubtasks] = useState(todo.subtasks || []);
+    const [completed, setCompleted] = useState(todo.completed || false);
+    const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [error, setError] = useState("");
+    const [calError, setCalError] = useState("");
 
     const handleSave = async () => {
-        setErrorMessage("");
-
+        if (!text.trim()) { setError("Görev boş olamaz"); return; }
+        setSaving(true);
         try {
-            setIsSaving(true);
-
-            if (!editedTodo.text || editedTodo.text.trim() === "") {
-                throw new Error(t.textRequired);
-            }
-
-            const updatedTodo = {
-                ...editedTodo,
-                id: todo.id,
-                recurring: isRecurring
-                    ? {
-                          type: recurrenceType,
-                          value: Number.parseInt(recurrenceValue, 10) || 1,
-                          nextDate: editedTodo.date
-                      }
-                    : null
-            };
-
-            await onUpdate(updatedTodo);
+            await onUpdate({
+                ...todo,
+                text: text.trim(),
+                priority,
+                date: date || null,
+                notes,
+                subtasks,
+                completed,
+                completedAt: completed && !todo.completed ? new Date().toISOString() : todo.completedAt || null,
+            });
             onClose();
-        } catch (error) {
-            setErrorMessage(`${t.saveError}: ${error.message}`);
+        } catch (e) {
+            setError(e.message);
         } finally {
-            setIsSaving(false);
+            setSaving(false);
         }
     };
 
     const handleDelete = async () => {
-        setErrorMessage("");
-
-        if (!window.confirm(t.confirmDelete)) {
-            return;
-        }
-
+        setDeleting(true);
         try {
-            setIsDeleting(true);
-
-            if (!todo.id) {
-                throw new Error(t.invalidId);
-            }
-
             await onDelete(todo.id);
             onClose();
-        } catch (error) {
-            setErrorMessage(`${t.deleteError}: ${error.message}`);
-        } finally {
-            setIsDeleting(false);
+        } catch (e) {
+            setError(e.message);
+            setDeleting(false);
         }
     };
-    const modalContent = (
-        <div className="fixed inset-0 bg-black/82 backdrop-blur-md z-[9999] flex items-center justify-center p-2 md:p-6">
-            <div className="glass-panel w-full max-w-[920px] max-h-[94vh] overflow-hidden app-fade-up border border-slate-500/40 shadow-[0_28px_80px_rgba(0,0,0,0.62)]">
-                <div className="flex items-center justify-between gap-3 p-4 border-b border-slate-600/70 bg-slate-950/55">
-                    <div className="min-w-0">
-                        <h2 className="text-xl md:text-2xl font-bold truncate">{t.title}</h2>
-                        <span
-                            className={`inline-flex mt-1 px-2.5 py-1 rounded-full text-xs border ${
-                                editedTodo.completed
-                                    ? "bg-emerald-500/25 border-emerald-300/40 text-emerald-100"
-                                    : "bg-sky-500/25 border-sky-300/40 text-sky-100"
-                            }`}
-                        >
-                            {statusLabel}
+
+    const priorities = [
+        { key: "low",    label: t.priority.low,    active: "bg-emerald-500/20 border-emerald-400/60 text-emerald-300", base: "border-[var(--border-soft)] text-[var(--text-muted)]" },
+        { key: "medium", label: t.priority.medium, active: "bg-amber-500/20 border-amber-400/60 text-amber-300",       base: "border-[var(--border-soft)] text-[var(--text-muted)]" },
+        { key: "high",   label: t.priority.high,   active: "bg-red-500/20 border-red-400/60 text-red-300",             base: "border-[var(--border-soft)] text-[var(--text-muted)]" },
+    ];
+
+    const modal = (
+        <div className="fixed inset-0 bg-[rgba(6,5,12,0.82)] backdrop-blur-md z-[9999] flex items-end sm:items-center justify-center sm:p-4">
+            <div className="modal-panel w-full sm:max-w-lg max-h-[92dvh] overflow-hidden app-fade-up flex flex-col">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] flex-shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <input
+                            type="checkbox"
+                            checked={completed}
+                            onChange={() => setCompleted(v => !v)}
+                            className="custom-checkbox"
+                        />
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                            completed
+                                ? "bg-emerald-500/15 border-emerald-400/25 text-emerald-300"
+                                : "bg-violet-500/15 border-violet-400/25 text-violet-300"
+                        }`}>
+                            {completed ? t.completed : t.active}
                         </span>
                     </div>
-
                     <button
                         onClick={onClose}
-                        className="btn-ghost h-10 w-10 !p-0 flex items-center justify-center"
-                        aria-label="Close"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl border border-[var(--border-soft)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <div className="overflow-y-auto max-h-[calc(94vh-176px)] p-4 md:p-5 space-y-4">
-                    {errorMessage && (
-                        <div className="rounded-xl border border-rose-300/35 bg-rose-500/20 text-rose-100 px-3 py-2 text-sm">
-                            {errorMessage}
-                        </div>
+                {/* Scrollable body */}
+                <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+                    {error && (
+                        <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>
                     )}
 
-                    <div className="surface-panel p-4 space-y-3">
-                        <div className="flex items-start gap-3">
-                            <input
-                                type="checkbox"
-                                checked={editedTodo.completed}
-                                onChange={handleToggleComplete}
-                                className="accent-sky-400 h-5 w-5 mt-1"
-                            />
-                            <input
-                                type="text"
-                                name="text"
-                                value={editedTodo.text}
-                                onChange={handleChange}
-                                className="input-elevated !py-2.5 text-lg font-semibold"
-                            />
-                        </div>
+                    {/* Title */}
+                    <input
+                        type="text"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className={`w-full bg-transparent border-none outline-none text-lg font-semibold placeholder:text-[var(--text-muted)] ${
+                            completed ? "line-through text-[var(--text-muted)]" : "text-[var(--text-main)]"
+                        }`}
+                        placeholder="Görev..."
+                    />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                                <p className="section-title mb-2.5">{t.priority.label}</p>
-                                <select
-                                    name="priority"
-                                    value={editedTodo.priority}
-                                    onChange={handleChange}
-                                    className="input-elevated !py-2.5"
+                    {/* Priority */}
+                    <div>
+                        <p className="section-title mb-2">{t.priority.label}</p>
+                        <div className="flex gap-2">
+                            {priorities.map(({ key, label, active, base }) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setPriority(key)}
+                                    className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                                        priority === key ? active : base
+                                    }`}
                                 >
-                                    <option value="high">{priorityOptions.high}</option>
-                                    <option value="medium">{priorityOptions.medium}</option>
-                                    <option value="low">{priorityOptions.low}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <p className="section-title mb-2.5">{t.date}</p>
-                                <input
-                                    type="date"
-                                    name="date"
-                                    value={editedTodo.date || ""}
-                                    onChange={handleChange}
-                                    className="input-elevated !py-2.5"
-                                />
-                            </div>
+                                    {label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="surface-panel p-4">
-                        <p className="section-title mb-2.5">{t.calendarTitle}</p>
-                        <p className="text-xs text-slate-400 mb-3">{t.calendarHint}</p>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <button type="button" onClick={handleAddGoogleCalendar} className="btn-primary px-4 py-2.5 text-sm">
-                                {t.addGoogle}
-                            </button>
-                            <button type="button" onClick={handleDownloadIcs} className="btn-secondary px-4 py-2.5 text-sm">
-                                {t.addPhoneCalendar}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="surface-panel p-4 space-y-4">
-                        <CategorySelector
-                            category={editedTodo.category || "other"}
-                            onChange={(nextCategory) => setEditedTodo((prev) => ({ ...prev, category: nextCategory }))}
-                            language={language}
+                    {/* Date + calendar export */}
+                    <div>
+                        <p className="section-title mb-2">{t.date}</p>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => { setDate(e.target.value); setCalError(""); }}
+                            className="input-elevated !py-2.5 text-sm"
                         />
 
-                        <TagsInput tags={editedTodo.tags || []} onChange={handleTagsUpdate} language={language} />
-                    </div>
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                type="button"
+                                disabled={!date}
+                                onClick={() => {
+                                    setCalError("");
+                                    const url = getGoogleCalendarUrl({ ...todo, text, date, notes, priority }, language);
+                                    if (url) window.open(url, "_blank", "noopener,noreferrer");
+                                    else setCalError(language === "tr" ? "Tarih gerekli" : "Date required");
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-semibold transition-all
+                                    border-[var(--border-soft)] text-[var(--text-secondary)]
+                                    hover:border-[rgba(66,133,244,0.5)] hover:text-[#93bbfd] hover:bg-[rgba(66,133,244,0.08)]
+                                    disabled:opacity-35 disabled:cursor-not-allowed"
+                            >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
+                                Google Takvim
+                            </button>
 
-                    <div className="surface-panel p-4">
-                        <label className="inline-flex items-center gap-2 mb-3 text-sm text-slate-100">
-                            <input
-                                type="checkbox"
-                                checked={isRecurring}
-                                onChange={(e) => setIsRecurring(e.target.checked)}
-                                className="accent-sky-400 h-4 w-4"
-                            />
-                            {t.recurring}
-                        </label>
+                            <button
+                                type="button"
+                                disabled={!date}
+                                onClick={() => {
+                                    setCalError("");
+                                    const ok = downloadTodoAsIcs({ ...todo, text, date, notes, priority }, language);
+                                    if (!ok) setCalError(language === "tr" ? "Tarih gerekli" : "Date required");
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-semibold transition-all
+                                    border-[var(--border-soft)] text-[var(--text-secondary)]
+                                    hover:border-[rgba(139,92,246,0.4)] hover:text-[var(--accent-light)] hover:bg-[rgba(139,92,246,0.08)]
+                                    disabled:opacity-35 disabled:cursor-not-allowed"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                {language === "tr" ? "Telefon Takvimi" : "Phone Calendar"}
+                            </button>
+                        </div>
 
-                        {isRecurring && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <select
-                                    value={recurrenceType}
-                                    onChange={(e) => setRecurrenceType(e.target.value)}
-                                    className="input-elevated !py-2.5"
-                                >
-                                    <option value="daily">{recurrenceOptions.daily}</option>
-                                    <option value="weekly">{recurrenceOptions.weekly}</option>
-                                    <option value="monthly">{recurrenceOptions.monthly}</option>
-                                    <option value="yearly">{recurrenceOptions.yearly}</option>
-                                </select>
-
-                                <label className="flex items-center gap-2 rounded-xl border border-slate-700/70 bg-slate-900/45 px-3 py-2.5 text-sm">
-                                    <span className="text-slate-300">{t.every}</span>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={recurrenceValue}
-                                        onChange={(e) => setRecurrenceValue(Number.parseInt(e.target.value, 10) || 1)}
-                                        className="w-20 rounded-lg border border-slate-600/70 bg-slate-800/80 px-2 py-1.5 text-slate-100"
-                                    />
-                                </label>
-                            </div>
+                        {calError && (
+                            <p className="text-xs text-amber-400 mt-1.5">{calError}</p>
                         )}
                     </div>
 
-                    <div className="surface-panel p-4">
-                        <p className="section-title mb-2.5">{t.notes}</p>
+                    {/* Subtasks */}
+                    <SubtaskList
+                        subtasks={subtasks}
+                        onUpdate={setSubtasks}
+                        language={language}
+                    />
+
+                    {/* Notes */}
+                    <div>
+                        <p className="section-title mb-2">{t.notes}</p>
                         <textarea
-                            name="notes"
-                            value={editedTodo.notes}
-                            onChange={handleChange}
-                            rows="4"
-                            className="input-elevated resize-none"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            rows={3}
                             placeholder={t.notesPlaceholder}
+                            className="input-elevated resize-none text-sm"
                         />
                     </div>
-
-                    <SubtaskList subtasks={editedTodo.subtasks} onUpdate={handleSubtasksUpdate} language={language} />
                 </div>
 
-                <div className="p-4 border-t border-slate-600/70 bg-slate-950/55 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <button
-                        onClick={handleDelete}
-                        disabled={isDeleting}
-                        className="btn-danger px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                        {isDeleting ? t.deleting : t.delete}
-                    </button>
-
-                    <div className="flex gap-2 sm:justify-end">
-                        <button onClick={onClose} className="btn-secondary px-4 py-2.5 text-sm">
-                            {t.cancel}
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="btn-primary px-4 py-2.5 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {isSaving ? t.saving : t.save}
-                        </button>
-                    </div>
+                {/* Footer */}
+                <div className="flex items-center justify-between gap-2 px-5 py-4 border-t border-[var(--border-soft)] flex-shrink-0">
+                    {confirmDelete ? (
+                        <div className="flex items-center gap-2 w-full app-fade-up">
+                            <span className="flex-1 text-sm text-[var(--text-secondary)]">
+                                {language === "tr" ? "Silinsin mi?" : "Delete this task?"}
+                            </span>
+                            <button
+                                onClick={() => setConfirmDelete(false)}
+                                className="btn-ghost px-3 py-2 text-sm"
+                            >
+                                {t.cancel}
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="btn-danger px-4 py-2 text-sm disabled:opacity-60"
+                            >
+                                {deleting ? t.deleting : t.delete}
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => setConfirmDelete(true)}
+                                className="btn-danger px-4 py-2.5 text-sm"
+                            >
+                                {t.delete}
+                            </button>
+                            <div className="flex gap-2">
+                                <button onClick={onClose} className="btn-ghost px-4 py-2.5 text-sm">{t.cancel}</button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="btn-primary px-5 py-2.5 text-sm disabled:opacity-60"
+                                >
+                                    {saving ? t.saving : t.save}
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
     );
 
-    return createPortal(modalContent, document.body);
+    return createPortal(modal, document.body);
 };
 
 export default TaskDetailModal;
-
